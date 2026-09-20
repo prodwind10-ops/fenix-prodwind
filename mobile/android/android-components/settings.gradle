@@ -1,0 +1,62 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+pluginManagement {
+    // MODIFIED — not the original Mozilla source. See fenix/settings.gradle for the full
+    // explanation: mozconfig.gradle requires Mozilla's `mach configure` output
+    // (config.status.json), which isn't available here, so it's not applied. Only the one key
+    // org.mozilla.conventions.settings actually reads (topsrcdir, to locate .buildconfig.yml) is
+    // supplied directly.
+    gradle.ext.mozconfig = [topsrcdir: rootProject.projectDir.absolutePath.minus("mobile/android/android-components")]
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url "https://maven.mozilla.org/maven2" }
+    }
+
+    includeBuild("../gradle/plugins/conventions")
+    includeBuild("plugins/dependencies")
+    includeBuild("plugins/publicsuffixlist")
+    includeBuild("../gradle/plugins/nimbus-gradle-plugin")
+}
+
+plugins {
+    id 'org.mozilla.conventions.settings'
+    id 'mozac.DependenciesPlugin'
+}
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            from(files("../../../gradle/libs.versions.toml"))
+        }
+    }
+}
+
+ext.topsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/android-components")
+
+// MODIFIED — the original guarded application-services inclusion on
+// gradle.ext.mozconfig.substs.*, which no longer exists (see above). application-services is not
+// present in this build's source tree, so this is skipped unconditionally.
+
+apply from: file('../shared-settings.gradle')
+
+buildCache {
+    local {
+        directory = new File(rootDir, '.build-cache')
+    }
+}
+
+def projectLocalProperties = file("local.properties").with { localPropertiesFile ->
+    def localProperties = new Properties()
+    if (localPropertiesFile.canRead()) {
+        localPropertiesFile.withInputStream { localProperties.load(it) }
+    }
+    localProperties
+}
+projectLocalProperties.each { prop ->
+    gradle.ext."localProperties.${prop.key}" = prop.value
+}

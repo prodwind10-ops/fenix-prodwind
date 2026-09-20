@@ -1,0 +1,14 @@
+// STUB FILE — not part of the original Mozilla source.
+//
+// fenix/settings.gradle and android-components/settings.gradle both do
+// `apply from: file('../shared-settings.gradle')`, referencing a real file
+// that exists somewhere in Mozilla's actual mozilla-central monorepo but
+// was not present in any of the zips provided for this build. Its real
+// contents are unknown. This stub exists purely so `apply from:` does not
+// hard-fail at settings-evaluation time with a file-not-found error.
+//
+// If the real build depends on something this file was supposed to
+// configure (shared repository declarations, version-catalog wiring, etc.),
+// that configuration is currently MISSING, not replicated. Revisit this if
+// the build fails in a way that traces back to something normally set up
+// here.

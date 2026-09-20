@@ -1,0 +1,20 @@
+android {
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // MODIFIED — not the original Mozilla source. config.compileSdkMajorVersion / etc. are
+    // extension properties this build's real source never actually defines (see
+    // fenix/app/build.gradle for the fuller explanation). Hardcoded to match the same values
+    // used there, so every android-components module compiles against the same SDK as the app.
+    compileSdk { version = release(36) { minorApiLevel = 0 } }
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 36
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+}
