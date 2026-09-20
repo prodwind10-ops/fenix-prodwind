@@ -31,12 +31,17 @@ pluginManagement {
     // dependencies should resolve from an in-tree build (MOZ_APPSERVICES_IN_TREE) or as published
     // artifacts. application-services isn't present in this build's source tree at all, so the
     // in-tree branch never applies; this only needs to exist and be castable, not be accurate.
+    // ProjectPlugin.configureAndroidBuildToolsVersion() also reads substs["ANDROID_BUILD_TOOLS_VERSION"]
+    // unconditionally (as String, no null-safety) to set AGP's buildToolsVersion directly; 36.0.0 is
+    // a real, current build-tools release aligned with the compileSdk 36 target used elsewhere in
+    // this build (see app/build.gradle) — adjust together if either changes.
     def resolvedTopsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/fenix")
     gradle.ext.mozconfig = [
         topsrcdir: resolvedTopsrcdir,
         topobjdir: "${resolvedTopsrcdir}/.topobjdir".toString(),
         substs: [
             MOZ_APPSERVICES_IN_TREE: "0",
+            ANDROID_BUILD_TOOLS_VERSION: "36.0.0",
         ],
     ]
 
