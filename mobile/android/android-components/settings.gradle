@@ -8,7 +8,15 @@ pluginManagement {
     // (config.status.json), which isn't available here, so it's not applied. Only the one key
     // org.mozilla.conventions.settings actually reads (topsrcdir, to locate .buildconfig.yml) is
     // supplied directly.
-    gradle.ext.mozconfig = [topsrcdir: rootProject.projectDir.absolutePath.minus("mobile/android/android-components")]
+    // See fenix/settings.gradle for the full explanation of each key here.
+    def resolvedTopsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/android-components")
+    gradle.ext.mozconfig = [
+        topsrcdir: resolvedTopsrcdir,
+        topobjdir: "${resolvedTopsrcdir}/.topobjdir".toString(),
+        substs: [
+            MOZ_APPSERVICES_IN_TREE: "0",
+        ],
+    ]
 
     repositories {
         google()

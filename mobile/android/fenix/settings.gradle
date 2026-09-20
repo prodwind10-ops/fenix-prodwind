@@ -24,10 +24,20 @@ pluginManagement {
     // redirect their build output into that unified tree. There's no such tree here, so this
     // points at an ordinary directory under this checkout instead — anything all those reads can
     // resolve and write under without colliding with one another.
+    //
+    // substs (a nested map of Mozilla mozconfig substitution values) is read by
+    // android-components/plugins/dependencies (DependenciesPlugin.apply(), unconditionally cast to
+    // Map<String, Any> with no null-safety) purely to decide whether application-services
+    // dependencies should resolve from an in-tree build (MOZ_APPSERVICES_IN_TREE) or as published
+    // artifacts. application-services isn't present in this build's source tree at all, so the
+    // in-tree branch never applies; this only needs to exist and be castable, not be accurate.
     def resolvedTopsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/fenix")
     gradle.ext.mozconfig = [
         topsrcdir: resolvedTopsrcdir,
         topobjdir: "${resolvedTopsrcdir}/.topobjdir".toString(),
+        substs: [
+            MOZ_APPSERVICES_IN_TREE: "0",
+        ],
     ]
 
     // MODIFIED — the original mozconfig.gradle also defines gradle.ext.configureMavenRepositories,
