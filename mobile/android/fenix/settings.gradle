@@ -17,7 +17,18 @@ pluginManagement {
     // to locate mobile/android/android-components/.buildconfig.yml. That's the one key this build
     // actually needs from the real mozconfig map, so it's supplied directly here rather than
     // reconstructing the much larger `substs` structure mozconfig.gradle would normally build.
-    gradle.ext.mozconfig = [topsrcdir: rootProject.projectDir.absolutePath.minus("mobile/android/fenix")]
+    //
+    // topobjdir (Mozilla's unified build-OUTPUT directory, distinct from topsrcdir) is also read
+    // directly by several of the included plugin sub-builds (nimbus-gradle-plugin, conventions,
+    // android-components/plugins/*, fenix/plugins/apksize, and fenix/app/build.gradle itself) to
+    // redirect their build output into that unified tree. There's no such tree here, so this
+    // points at an ordinary directory under this checkout instead — anything all those reads can
+    // resolve and write under without colliding with one another.
+    def resolvedTopsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/fenix")
+    gradle.ext.mozconfig = [
+        topsrcdir: resolvedTopsrcdir,
+        topobjdir: "${resolvedTopsrcdir}/.topobjdir".toString(),
+    ]
 
     // MODIFIED — the original mozconfig.gradle also defines gradle.ext.configureMavenRepositories,
     // a closure most of the included plugin sub-builds (../gradle/plugins/conventions,
