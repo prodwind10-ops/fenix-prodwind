@@ -104,14 +104,19 @@ robolectric = "4.14.1"
 jacoco = "0.8.12"
 
 # --- Mozilla ---
-mozilla-glean = "63.1.1"
-# MODIFIED / NEW — gradle/plugins/conventions' ProjectPlugin.kt looks this up dynamically via
+# MODIFIED — was "63.1.1", a version confirmed NOT to exist on maven.mozilla.org (the build
+# actually failed trying to resolve glean-gradle-plugin:63.1.1 there, and at every other searched
+# repo). "67.1.0" is directly confirmed resolvable: maven.mozilla.org serves a real .pom for
+# glean-gradle-plugin at this exact version. The plugin and the Glean SDK runtime library release
+# in lockstep per Mozilla's own build.gradle source, so both entries below use the same number.
+mozilla-glean = "67.1.0"
+# gradle/plugins/conventions' ProjectPlugin.kt looks this up dynamically via
 # VersionCatalogsExtension.findVersion("glean") (literal string "glean", not "mozilla-glean"), to
 # force-align every transitive org.mozilla.telemetry:glean* dependency's major version. Kept as a
 # separate versions entry pointing at the same value as mozilla-glean above, rather than renaming
 # mozilla-glean itself, since libs.mozilla.glean (the compile-time accessor) is already used
 # elsewhere in this catalog and in app/build.gradle.
-glean = "63.1.1"
+glean = "67.1.0"
 
 # --- Build-logic tooling (used only by the plugin sub-builds under gradle/plugins/ and
 # android-components/plugins/, not by the app itself) ---
