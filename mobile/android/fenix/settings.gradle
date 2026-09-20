@@ -19,11 +19,24 @@ pluginManagement {
     // reconstructing the much larger `substs` structure mozconfig.gradle would normally build.
     gradle.ext.mozconfig = [topsrcdir: rootProject.projectDir.absolutePath.minus("mobile/android/fenix")]
 
+    // MODIFIED — the original mozconfig.gradle also defines gradle.ext.configureMavenRepositories,
+    // a closure most of the included plugin sub-builds (../gradle/plugins/conventions,
+    // ../android-components/plugins/*, ../gradle/plugins/nimbus-gradle-plugin) call directly as
+    // `gradle.configureMavenRepositories(delegate)`, and which several of them ALSO copy down from
+    // `gradle.root`/`gradle.parent` alongside mozconfig whenever gradle.root already has a
+    // "mozconfig" property — which it now does, because of the line above. Without this, those
+    // sub-builds crash with "Cannot get property 'configureMavenRepositories' ... as it does not
+    // exist" the moment Gradle tries to resolve them. Defined here as a plain closure so it
+    // propagates the same way mozconfig does.
+    gradle.ext.configureMavenRepositories = { repositoryHandler ->
+        repositoryHandler.google()
+        repositoryHandler.mavenCentral()
+        repositoryHandler.gradlePluginPortal()
+        repositoryHandler.maven { url "https://maven.mozilla.org/maven2" }
+    }
+
     repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-        maven { url "https://maven.mozilla.org/maven2" }
+        gradle.configureMavenRepositories(delegate)
     }
 
     includeBuild("../gradle/plugins/conventions")
@@ -40,6 +53,9 @@ plugins {
 }
 
 dependencyResolutionManagement {
+    repositories {
+        gradle.configureMavenRepositories(delegate)
+    }
     versionCatalogs {
         libs {
             from(files("../../../gradle/libs.versions.toml"))
