@@ -105,11 +105,22 @@ jacoco = "0.8.12"
 
 # --- Mozilla ---
 mozilla-glean = "63.1.1"
+# MODIFIED / NEW — gradle/plugins/conventions' ProjectPlugin.kt looks this up dynamically via
+# VersionCatalogsExtension.findVersion("glean") (literal string "glean", not "mozilla-glean"), to
+# force-align every transitive org.mozilla.telemetry:glean* dependency's major version. Kept as a
+# separate versions entry pointing at the same value as mozilla-glean above, rather than renaming
+# mozilla-glean itself, since libs.mozilla.glean (the compile-time accessor) is already used
+# elsewhere in this catalog and in app/build.gradle.
+glean = "63.1.1"
 
 # --- Build-logic tooling (used only by the plugin sub-builds under gradle/plugins/ and
 # android-components/plugins/, not by the app itself) ---
 kaml = "0.27.0"
 spotless = "8.6.0"
+ktfmt = "0.61"
+# MODIFIED / NEW — see the detekt-cli library entry below for why this exists and the version
+# caveat.
+detekt = "1.23.8"
 json = "20250517"
 androidx-lint = "1.0.0"
 junit5-bom = "5.13.4"
@@ -236,6 +247,22 @@ mozilla-glean-forUnitTests = { module = "org.mozilla.telemetry:glean-native-forU
 # --- Build-logic tooling ---
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 spotless-plugin = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+# MODIFIED / NEW — not found by static libs.* grepping. gradle/plugins/conventions'
+# Ktfmt.kt looks this up dynamically at runtime via VersionCatalogsExtension.findVersion("ktfmt")
+# and .findLibrary("ktfmt") (both by literal string, not a compile-time libs.ktfmt accessor), so it
+# was missed by every earlier static-reference sweep of this catalog. The alias name below must
+# stay exactly "ktfmt" to match those literal string lookups.
+ktfmt = { module = "com.facebook:ktfmt", version.ref = "ktfmt" }
+# MODIFIED / NEW — same dynamic-lookup situation as ktfmt above: ProjectPlugin.kt's
+# configureDetekt() calls findLibrary("detekt-cli") by literal string. Unlike ktfmt, this specific
+# call sits inside a lazy project.provider { } that assembleDebug likely never triggers (Detekt's
+# classpath is only resolved if something actually consumes the "detektCli" configuration), so
+# this is added defensively rather than confirmed necessary. Detekt has since moved its Maven
+# group from io.gitlab.arturbosch.detekt to dev.detekt alongside a 2.0.0 release; 1.23.8 (the
+# last version under the old, confirmed-stable coordinates) is used here deliberately rather than
+# guessing at the exact dev.detekt cutover version, since this dependency is expected to be
+# unreachable for a debug assemble anyway.
+detekt-cli = { module = "io.gitlab.arturbosch.detekt:detekt-cli", version.ref = "detekt" }
 json = { module = "org.json:json", version.ref = "json" }
 androidx-lint = { module = "androidx.lint:lint-gradle", version.ref = "androidx-lint" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit5-bom" }
