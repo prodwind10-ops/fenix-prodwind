@@ -43,6 +43,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 
 dependencies {
     implementation(libs.kaml)
+    // MODIFIED — not in the original dependency list. kaml alone doesn't expose
+    // kotlinx.serialization's own annotations/classes (@Serializable, DeserializationStrategy,
+    // StringFormat) on this module's compile classpath; BuildConfig.kt uses those directly.
+    implementation(libs.kotlinx.serialization.core)
     compileOnly(libs.android.gradle.plugin)
     implementation(libs.spotless.plugin)
     testImplementation(platform(libs.junit.bom))
