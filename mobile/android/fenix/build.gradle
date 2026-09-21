@@ -7,7 +7,19 @@ buildscript {
 
     dependencies {
         classpath libs.android.gradle.plugin
-        classpath libs.kotlin.gradle.plugin
+        // MODIFIED — removed classpath libs.kotlin.gradle.plugin. app/build.gradle applies three
+        // Kotlin sub-plugins via alias (kotlin.compose, kotlin.parcelize, kotlin.serialization),
+        // all bundled as plugin markers inside this same jar. The classpath entry conflicted with
+        // parcelize's alias application the same way safeargs conflicted below — "Error resolving
+        // plugin [id: 'org.jetbrains.kotlin.plugin.parcelize', version: '2.1.0'] ... already on
+        // the classpath with an unknown version, so compatibility cannot be checked." Removed
+        // pre-emptively for compose and serialization too, since they come from the identical
+        // jar and would very likely hit the same conflict one at a time across future runs.
+        // UNVERIFIED RISK: no explicit `id 'org.jetbrains.kotlin.android'` (or similar) appears
+        // anywhere in this file or app/build.gradle, so it's not confirmed whether base Kotlin
+        // language support depends on this specific classpath entry or comes from elsewhere
+        // (e.g. a conventions plugin). If the next build error is Kotlin-compilation-related
+        // rather than plugin-resolution-related, this removal is the first thing to revisit.
         classpath libs.androidx.benchmark.gradle
         // MODIFIED — removed classpath libs.androidx.navigation.safeargs. app/build.gradle
         // applies this plugin via `alias(libs.plugins.androidx.safeargs)`, the modern
