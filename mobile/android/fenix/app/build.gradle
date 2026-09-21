@@ -12,12 +12,27 @@ plugins {
     id 'jacoco'
     alias(libs.plugins.androidx.safeargs)
     alias(libs.plugins.dependency.analysis)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.parcelize)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.protobuf.plugin)
 }
+
+// MODIFIED — not the original Mozilla source. kotlin.compose/kotlin.parcelize/kotlin.serialization
+// were previously applied via `alias(libs.plugins.kotlin.*)` inside the plugins{} block above.
+// Every plugin sub-build this project includes (gradle/plugins/conventions,
+// gradle/plugins/nimbus-gradle-plugin, android-components/plugins/*, fenix/plugins/apksize) uses
+// Gradle's built-in `kotlin-dsl` plugin to compile its own .kts/.kt source, and `kotlin-dsl` itself
+// applies the Kotlin Gradle Plugin as a dependency — which puts a Kotlin Gradle Plugin jar (and
+// its bundled parcelize/compose/serialization plugin markers) on the plugin classpath regardless
+// of whether this file's own buildscript{} block declares it directly. `alias(libs.plugins.kotlin.*)`
+// then fails with: "Error resolving plugin [id: '...', version: '2.1.0'] ... already on the
+// classpath with an unknown version, so compatibility cannot be checked" — Gradle can't verify the
+// alias's requested version against a classpath jar it can't read a version off of.
+// `apply plugin: "..."` (the older mechanism, used here) doesn't perform that same
+// classpath-version-compatibility check, so it applies successfully against whatever Kotlin
+// Gradle Plugin version is already on the classpath rather than requesting a specific one.
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.parcelize'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
 // MODIFIED — the original guarded this on gradle.mozconfig.substs.MOZILLA_OFFICIAL, which isn't
 // defined in this build (see settings.gradle). Hardcoded to false: this is correct for a personal
