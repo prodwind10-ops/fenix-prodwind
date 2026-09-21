@@ -9,7 +9,13 @@ buildscript {
         classpath libs.android.gradle.plugin
         classpath libs.kotlin.gradle.plugin
         classpath libs.androidx.benchmark.gradle
-        classpath libs.androidx.navigation.safeargs
+        // MODIFIED — removed classpath libs.androidx.navigation.safeargs. app/build.gradle
+        // applies this plugin via `alias(libs.plugins.androidx.safeargs)`, the modern
+        // version-catalog plugin mechanism, which supplies its own version and doesn't need (and
+        // actively conflicts with) a separate classpath jar for the same plugin ID. Having both
+        // produced: "Error resolving plugin [id: 'androidx.navigation.safeargs.kotlin', version:
+        // '2.8.5'] ... already on the classpath with an unknown version, so compatibility cannot
+        // be checked."
         classpath libs.mozilla.glean.gradle.plugin
         classpath libs.osslicenses.plugin
 
