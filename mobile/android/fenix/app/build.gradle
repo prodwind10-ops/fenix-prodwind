@@ -6,6 +6,16 @@ import static org.mozilla.conventions.BuildConfigKt.getBuildId
 
 plugins {
     id 'com.android.application'
+    // MODIFIED / NEW — not the original Mozilla source (or not applied here originally; never
+    // located explicitly anywhere in this file or build.gradle across this whole build-fixing
+    // effort, despite Kotlin compilation clearly working throughout). Added directly because
+    // `androidx.navigation.safeargs.kotlin` (below) failed with "plugin must be used with kotlin
+    // plugin" once kotlin.compose/parcelize/serialization moved to apply-plugin statements after
+    // this block (see the comment further down) — that reordering apparently removed whatever
+    // implicit signal previously satisfied safeargs's check. Placed ahead of safeargs in this
+    // block specifically because plugins{} entries resolve before any later apply-plugin: calls
+    // in the script body, and safeargs's own check runs during plugins{} resolution.
+    id 'org.jetbrains.kotlin.android'
     id 'org.mozilla.conventions.zip-test-reports'
     id 'org.mozilla.nimbus-gradle-plugin'
     id 'ApkSizePlugin'
