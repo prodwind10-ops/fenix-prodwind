@@ -43,6 +43,26 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// MODIFIED / NEW — not the original Mozilla source. gradle/plugins/conventions'
+// ProjectPlugin.configureKotlinJvmToolchain() reads project.rootProject.extensions.extraProperties["config"]
+// via reflection, expecting an object with a public `jvmTargetCompatibility` (Int) field, to set
+// Kotlin's JVM toolchain target. No code anywhere in this build (mozac.ConfigPlugin.apply() is a
+// no-op; its Config object has no such field) actually registers this — it's presumably supplied
+// by Mozilla's real build tooling outside what's in this repo. A minimal class satisfying just
+// that one reflected field is registered here instead. 17 is used as the target: it's a
+// deliberate choice, not an extracted value — Android/AGP toolchains have generally targeted
+// JDK 17 bytecode even when built with a newer JDK (21 is used to *run* this build, per the
+// workflow's setup-java step), and nothing else in this build states a real target to match.
+//
+// IMPORTANT: `public` is required explicitly here. A Groovy class property declared with no
+// access modifier (e.g. plain `int jvmTargetCompatibility = 17`) compiles to a PRIVATE backing
+// field with a public getter/setter — ProjectPlugin.kt calls Java's getField() (public-only
+// reflection, not getDeclaredField()), which would silently fail to find it otherwise.
+class MinimalBuildConfig {
+    public int jvmTargetCompatibility = 17
+}
+rootProject.ext.config = new MinimalBuildConfig()
+
 mozilla {
     ktfmtSourcePaths = ["app/src/**/*.kt", "!**/build/**/*.kt"]
 }
