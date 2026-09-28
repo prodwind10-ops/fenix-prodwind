@@ -139,6 +139,11 @@ osslicenses-plugin = "0.10.6"
 # --- Gradle plugin classpath jars (applied via buildscript { classpath ... }) ---
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+# MODIFIED / NEW — org.jetbrains.kotlin.plugin.serialization's `apply plugin:` form (used in
+# app/build.gradle) needs this specific classpath artifact; it isn't bundled inside
+# kotlin-gradle-plugin the way compose/parcelize's markers are. Confirmed directly against
+# JetBrains' own Kotlin serialization setup docs (consistent from Kotlin 1.4 through 2.x).
+kotlin-serialization-compiler = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 androidx-benchmark-gradle = { module = "androidx.benchmark:benchmark-gradle-plugin", version.ref = "androidx-benchmark" }
 androidx-benchmark-junit4 = { module = "androidx.benchmark:benchmark-junit4", version.ref = "androidx-benchmark" }
 androidx-navigation-safeargs = { module = "androidx.navigation:navigation-safe-args-gradle-plugin", version.ref = "androidx-navigation" }

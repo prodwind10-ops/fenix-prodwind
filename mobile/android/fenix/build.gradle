@@ -30,6 +30,11 @@ buildscript {
         // be checked."
         classpath libs.mozilla.glean.gradle.plugin
         classpath libs.osslicenses.plugin
+        // NEW — required for app/build.gradle's `apply plugin: 'kotlinx-serialization'`.
+        // org.jetbrains.kotlin.plugin.serialization's marker isn't bundled in
+        // kotlin-gradle-plugin the way compose/parcelize's are; JetBrains' own docs specify this
+        // exact separate classpath artifact for the apply-plugin (non-alias) form.
+        classpath libs.kotlin.serialization.compiler
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files

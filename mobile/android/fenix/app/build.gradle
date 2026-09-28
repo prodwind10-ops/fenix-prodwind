@@ -42,7 +42,13 @@ plugins {
 // Gradle Plugin version is already on the classpath rather than requesting a specific one.
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.kotlin.plugin.parcelize'
-apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+// MODIFIED — was 'org.jetbrains.kotlin.plugin.serialization' (the plugins{}/alias-style dotted
+// ID), which threw UnknownPluginException here: unlike compose/parcelize, this plugin's marker
+// isn't bundled inside kotlin-gradle-plugin, and the classpath-based apply-plugin form registers
+// it under this shorter 'kotlinx-serialization' ID instead (per JetBrains' own setup docs). The
+// classpath dependency this now needs (org.jetbrains.kotlin:kotlin-serialization) was added to
+// the root build.gradle's buildscript block.
+apply plugin: 'kotlinx-serialization'
 
 // MODIFIED — the original guarded this on gradle.mozconfig.substs.MOZILLA_OFFICIAL, which isn't
 // defined in this build (see settings.gradle). Hardcoded to false: this is correct for a personal
