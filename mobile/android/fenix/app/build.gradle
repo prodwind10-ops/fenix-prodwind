@@ -6,54 +6,20 @@ import static org.mozilla.conventions.BuildConfigKt.getBuildId
 
 plugins {
     id 'com.android.application'
-    // MODIFIED / NEW — not the original Mozilla source (or not applied here originally; never
-    // located explicitly anywhere in this file or build.gradle across this whole build-fixing
-    // effort, despite Kotlin compilation clearly working throughout). Added directly because
-    // `androidx.navigation.safeargs.kotlin` (below) failed with "plugin must be used with kotlin
-    // plugin" once kotlin.compose/parcelize/serialization moved to apply-plugin statements after
-    // this block (see the comment further down) — that reordering apparently removed whatever
-    // implicit signal previously satisfied safeargs's check. Placed ahead of safeargs in this
-    // block specifically because plugins{} entries resolve before any later apply-plugin: calls
-    // in the script body, and safeargs's own check runs during plugins{} resolution.
-    id 'org.jetbrains.kotlin.android'
     id 'org.mozilla.conventions.zip-test-reports'
     id 'org.mozilla.nimbus-gradle-plugin'
     id 'ApkSizePlugin'
     id 'jacoco'
     alias(libs.plugins.androidx.safeargs)
     alias(libs.plugins.dependency.analysis)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.protobuf.plugin)
 }
 
-// MODIFIED — not the original Mozilla source. kotlin.compose/kotlin.parcelize/kotlin.serialization
-// were previously applied via `alias(libs.plugins.kotlin.*)` inside the plugins{} block above.
-// Every plugin sub-build this project includes (gradle/plugins/conventions,
-// gradle/plugins/nimbus-gradle-plugin, android-components/plugins/*, fenix/plugins/apksize) uses
-// Gradle's built-in `kotlin-dsl` plugin to compile its own .kts/.kt source, and `kotlin-dsl` itself
-// applies the Kotlin Gradle Plugin as a dependency — which puts a Kotlin Gradle Plugin jar (and
-// its bundled parcelize/compose/serialization plugin markers) on the plugin classpath regardless
-// of whether this file's own buildscript{} block declares it directly. `alias(libs.plugins.kotlin.*)`
-// then fails with: "Error resolving plugin [id: '...', version: '2.1.0'] ... already on the
-// classpath with an unknown version, so compatibility cannot be checked" — Gradle can't verify the
-// alias's requested version against a classpath jar it can't read a version off of.
-// `apply plugin: "..."` (the older mechanism, used here) doesn't perform that same
-// classpath-version-compatibility check, so it applies successfully against whatever Kotlin
-// Gradle Plugin version is already on the classpath rather than requesting a specific one.
-apply plugin: 'org.jetbrains.kotlin.plugin.compose'
-apply plugin: 'org.jetbrains.kotlin.plugin.parcelize'
-// MODIFIED — was 'org.jetbrains.kotlin.plugin.serialization' (the plugins{}/alias-style dotted
-// ID), which threw UnknownPluginException here: unlike compose/parcelize, this plugin's marker
-// isn't bundled inside kotlin-gradle-plugin, and the classpath-based apply-plugin form registers
-// it under this shorter 'kotlinx-serialization' ID instead (per JetBrains' own setup docs). The
-// classpath dependency this now needs (org.jetbrains.kotlin:kotlin-serialization) was added to
-// the root build.gradle's buildscript block.
-apply plugin: 'kotlinx-serialization'
-
-// MODIFIED — the original guarded this on gradle.mozconfig.substs.MOZILLA_OFFICIAL, which isn't
-// defined in this build (see settings.gradle). Hardcoded to false: this is correct for a personal
-// debug build, since MOZILLA_OFFICIAL genuinely should be false here.
-if (false && !project.hasProperty('android-lint')) {
+if (gradle.mozconfig.substs.MOZILLA_OFFICIAL && !project.hasProperty('android-lint')) {
     apply plugin: 'com.google.android.gms.oss-licenses-plugin'
 }
 
@@ -69,14 +35,11 @@ android {
         testBuildType project.property("testBuildType")
     }
 
-    // MODIFIED — not the original Mozilla source. `config.compileSdkMajorVersion` /
-    // `config.compileSdkMinorVersion` / `config.minSdkVersion` / `config.targetSdkVersion` are
-    // extension properties this build's real source never actually defines anywhere we could
-    // find (ConfigPlugin.kt's apply() is a no-op; the conventions plugin doesn't register them
-    // either) — they're presumably supplied by a piece of Mozilla's build system not present
-    // here. Hardcoded to current, reasonable values below; adjust if a real build error
-    // indicates otherwise.
-    compileSdk { version = release(36) { minorApiLevel = 0 } }
+    compileSdk {
+        version = release(config.compileSdkMajorVersion) {
+            minorApiLevel = config.compileSdkMinorVersion
+        }
+    }
 
     defaultConfig {
         ksp {
@@ -89,8 +52,8 @@ android {
         // installed alongside real Firefox (org.mozilla.firefox) without any risk of an
         // applicationId collision, now or if Mozilla ships another org.mozilla.fenix.* variant.
         applicationId "dev.personal.fenixfork"
-        minSdk 24
-        targetSdk 36
+        minSdk config.minSdkVersion
+        targetSdk config.targetSdkVersion
         versionCode 1
         versionName Config.generateDebugVersionName()
         vectorDrawables.useSupportLibrary = true
@@ -272,8 +235,7 @@ android {
                 include "arm64-v8a"
             } else {
                 include "armeabi-v7a", "arm64-v8a", "x86_64"
-                // MODIFIED — see the OSS-licenses fix above for why this is hardcoded false.
-                if (false || System.getenv("MOZ_BUILD_CONFIG_LINT") == "1") {
+                if (gradle.mozconfig.substs.MOZILLA_OFFICIAL || System.getenv("MOZ_BUILD_CONFIG_LINT") == "1") {
                     universalApk true
                 }
             }
@@ -375,11 +337,8 @@ android.defaultConfig.with {
 
     // Setting buildDate with every build ID changes the generated BuildConfig and slows down the
     // build, so debug builds (overridden below) use a fixed string instead.
-    // MODIFIED — the original computed this from gradle.mozconfig.topobjdir, which isn't defined
-    // in this build (see settings.gradle). Since debug builds unconditionally override this value
-    // below anyway, and this line must still evaluate without crashing for every variant
-    // (defaultConfig runs regardless of which variant is ultimately assembled), it's replaced with
-    // a fixed placeholder rather than a real build-ID computation.
+    // MODIFIED — the original derived this from the build ID in topobjdir/buildid.h. Debug builds
+    // override it below anyway, so a fixed placeholder is used to keep this a no-op.
     def buildDate = "1970-01-01T00:00:00"
     buildConfigField 'String', 'BUILD_DATE', '"' + buildDate + '"'
 
@@ -470,10 +429,11 @@ ext {
     // Enable expiration by major version.
     gleanExpireByVersion = Config.majorVersion(project)
     gleanNamespace = "mozilla.telemetry.glean"
-    // MODIFIED — the original pointed this at gradle.mozconfig.substs.GRADLE_GLEAN_PARSER_VENV
-    // (a pre-built Python venv path from Mozilla's mach tooling), which isn't defined in this
-    // build. Left null so the Glean Gradle plugin falls back to its own default venv handling.
-    gleanPythonEnvDir = null
+    // Only point the Glean plugin at an external Python venv when one is configured. When the
+    // property is not defined at all, the plugin creates and manages its own venv.
+    if (gradle.mozconfig.substs.GRADLE_GLEAN_PARSER_VENV) {
+        gleanPythonEnvDir = gradle.mozconfig.substs.GRADLE_GLEAN_PARSER_VENV
+    }
 }
 apply plugin: "org.mozilla.telemetry.glean-gradle-plugin"
 

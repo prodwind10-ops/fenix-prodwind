@@ -7,34 +7,11 @@ buildscript {
 
     dependencies {
         classpath libs.android.gradle.plugin
-        // MODIFIED — removed classpath libs.kotlin.gradle.plugin. app/build.gradle applies three
-        // Kotlin sub-plugins via alias (kotlin.compose, kotlin.parcelize, kotlin.serialization),
-        // all bundled as plugin markers inside this same jar. The classpath entry conflicted with
-        // parcelize's alias application the same way safeargs conflicted below — "Error resolving
-        // plugin [id: 'org.jetbrains.kotlin.plugin.parcelize', version: '2.1.0'] ... already on
-        // the classpath with an unknown version, so compatibility cannot be checked." Removed
-        // pre-emptively for compose and serialization too, since they come from the identical
-        // jar and would very likely hit the same conflict one at a time across future runs.
-        // UNVERIFIED RISK: no explicit `id 'org.jetbrains.kotlin.android'` (or similar) appears
-        // anywhere in this file or app/build.gradle, so it's not confirmed whether base Kotlin
-        // language support depends on this specific classpath entry or comes from elsewhere
-        // (e.g. a conventions plugin). If the next build error is Kotlin-compilation-related
-        // rather than plugin-resolution-related, this removal is the first thing to revisit.
+        classpath libs.kotlin.gradle.plugin
         classpath libs.androidx.benchmark.gradle
-        // MODIFIED — removed classpath libs.androidx.navigation.safeargs. app/build.gradle
-        // applies this plugin via `alias(libs.plugins.androidx.safeargs)`, the modern
-        // version-catalog plugin mechanism, which supplies its own version and doesn't need (and
-        // actively conflicts with) a separate classpath jar for the same plugin ID. Having both
-        // produced: "Error resolving plugin [id: 'androidx.navigation.safeargs.kotlin', version:
-        // '2.8.5'] ... already on the classpath with an unknown version, so compatibility cannot
-        // be checked."
+        classpath libs.androidx.navigation.safeargs
         classpath libs.mozilla.glean.gradle.plugin
         classpath libs.osslicenses.plugin
-        // NEW — required for app/build.gradle's `apply plugin: 'kotlinx-serialization'`.
-        // org.jetbrains.kotlin.plugin.serialization's marker isn't bundled in
-        // kotlin-gradle-plugin the way compose/parcelize's are; JetBrains' own docs specify this
-        // exact separate classpath artifact for the apply-plugin (non-alias) form.
-        classpath libs.kotlin.serialization.compiler
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -47,26 +24,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.ksp)
 }
-
-// MODIFIED / NEW — not the original Mozilla source. gradle/plugins/conventions'
-// ProjectPlugin.configureKotlinJvmToolchain() reads project.rootProject.extensions.extraProperties["config"]
-// via reflection, expecting an object with a public `jvmTargetCompatibility` (Int) field, to set
-// Kotlin's JVM toolchain target. No code anywhere in this build (mozac.ConfigPlugin.apply() is a
-// no-op; its Config object has no such field) actually registers this — it's presumably supplied
-// by Mozilla's real build tooling outside what's in this repo. A minimal class satisfying just
-// that one reflected field is registered here instead. 17 is used as the target: it's a
-// deliberate choice, not an extracted value — Android/AGP toolchains have generally targeted
-// JDK 17 bytecode even when built with a newer JDK (21 is used to *run* this build, per the
-// workflow's setup-java step), and nothing else in this build states a real target to match.
-//
-// IMPORTANT: `public` is required explicitly here. A Groovy class property declared with no
-// access modifier (e.g. plain `int jvmTargetCompatibility = 17`) compiles to a PRIVATE backing
-// field with a public getter/setter — ProjectPlugin.kt calls Java's getField() (public-only
-// reflection, not getDeclaredField()), which would silently fail to find it otherwise.
-class MinimalBuildConfig {
-    public int jvmTargetCompatibility = 17
-}
-rootProject.ext.config = new MinimalBuildConfig()
 
 mozilla {
     ktfmtSourcePaths = ["app/src/**/*.kt", "!**/build/**/*.kt"]

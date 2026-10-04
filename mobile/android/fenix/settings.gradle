@@ -3,62 +3,101 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 pluginManagement {
-    // MODIFIED — not the original Mozilla source.
+    // ---------------------------------------------------------------------------------------
+    // Emulated Mozilla build configuration (NOT part of the upstream source).
     //
-    // The original here did:
-    //   if (!gradle.root.hasProperty("mozconfig")) { apply from: file('../gradle/mozconfig.gradle') }
-    // mozconfig.gradle is a bridge into Mozilla's `mach` build orchestrator: it hard-fails
-    // (GradleException) unless a config.status.json file exists, which is only produced by
-    // running `./mach configure` inside a full mozilla-central checkout with Mozilla's Python
-    // build tooling. That's not available here, so mozconfig.gradle is not applied at all.
+    // In mozilla-central, ../gradle/mozconfig.gradle builds `gradle.mozconfig` from the
+    // config.status.json that `./mach configure` writes. This repository only contains the
+    // mobile/android slice of the tree, so that file can never exist here. Instead we supply
+    // the small set of values the Gradle build actually reads, and create the few "objdir"
+    // inputs that `./mach build` would normally generate. Everything is derived from paths
+    // inside this checkout, so it behaves the same locally and on CI.
     //
-    // org.mozilla.conventions.settings (applied below, from ../gradle/plugins/conventions) reads
-    // gradle.ext.mozconfig.topsrcdir directly and unconditionally (SettingsPlugin.loadBuildConfig),
-    // to locate mobile/android/android-components/.buildconfig.yml. That's the one key this build
-    // actually needs from the real mozconfig map, so it's supplied directly here rather than
-    // reconstructing the much larger `substs` structure mozconfig.gradle would normally build.
-    //
-    // topobjdir (Mozilla's unified build-OUTPUT directory, distinct from topsrcdir) is also read
-    // directly by several of the included plugin sub-builds (nimbus-gradle-plugin, conventions,
-    // android-components/plugins/*, fenix/plugins/apksize, and fenix/app/build.gradle itself) to
-    // redirect their build output into that unified tree. There's no such tree here, so this
-    // points at an ordinary directory under this checkout instead — anything all those reads can
-    // resolve and write under without colliding with one another.
-    //
-    // substs (a nested map of Mozilla mozconfig substitution values) is read by
-    // android-components/plugins/dependencies (DependenciesPlugin.apply(), unconditionally cast to
-    // Map<String, Any> with no null-safety) purely to decide whether application-services
-    // dependencies should resolve from an in-tree build (MOZ_APPSERVICES_IN_TREE) or as published
-    // artifacts. application-services isn't present in this build's source tree at all, so the
-    // in-tree branch never applies; this only needs to exist and be castable, not be accurate.
-    // ProjectPlugin.configureAndroidBuildToolsVersion() also reads substs["ANDROID_BUILD_TOOLS_VERSION"]
-    // unconditionally (as String, no null-safety) to set AGP's buildToolsVersion directly; 36.0.0 is
-    // a real, current build-tools release aligned with the compileSdk 36 target used elsewhere in
-    // this build (see app/build.gradle) — adjust together if either changes.
-    def resolvedTopsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/fenix")
+    // What each value is for:
+    //  - topsrcdir / topobjdir: the conventions plugin finds .buildconfig.yml and redirects every
+    //    project's build directory to ${topobjdir}/gradle/build/<project path>. Build outputs
+    //    (including the APK) therefore land under .topobjdir/, not under each project's build/.
+    //  - MOZ_APP_VERSION / MOZ_UPDATE_CHANNEL / MOZ_ANDROID_FAT_AAR_ARCHITECTURES and the build ID
+    //    below: engine-gecko resolves GeckoView from Mozilla's Maven as
+    //    org.mozilla.geckoview:geckoview-nightly-omni:<major>.<minor>.<build id>. A fat-AAR value
+    //    keeps that coordinate free of the "-SNAPSHOT" and per-ABI suffixes (which only exist for
+    //    local Gecko builds / automation).
+    //  - ANDROID_BUILD_TOOLS_VERSION: read unconditionally by ProjectPlugin.
+    //  - Anything not listed (MOZILLA_OFFICIAL, MOZ_AUTOMATION, GRADLE_GLEAN_PARSER_VENV, ...) is
+    //    deliberately left undefined, which is what a plain local debug build looks like.
+    // ---------------------------------------------------------------------------------------
+    def topsrcdir = rootProject.projectDir.toPath().resolve("../../..").normalize().toString()
+    def topobjdir = new File(topsrcdir, ".topobjdir").path
+    new File(topobjdir).mkdirs()
+
+    // Firefox version of this source snapshot, from mobile/android/version.txt (first line).
+    def appVersion = new File(topsrcdir, "mobile/android/version.txt").readLines().first().trim()
+
+    // 14-digit build ID of the GeckoView nightly this snapshot is built against. The environment
+    // variable MOZ_BUILD_DATE takes precedence (that is how the build already reads it); the
+    // default is a published geckoview-nightly-omni build from the same day as the snapshot's
+    // application-services pin (see ApplicationServices.kt), 2026-09-16.
+    def geckoBuildId = System.getenv("MOZ_BUILD_DATE") ?: "20260916202159"
+    new File(topobjdir, "buildid.h").text = "#define MOZ_BUILDID ${geckoBuildId}\n"
+
+    // lib-crash compiles CrashReport.kt, which Mozilla's build system generates from
+    // toolkit/crashreporter/CrashAnnotations.yaml (not part of this slice). This stand-in declares
+    // exactly the annotation names the Kotlin sources in this repository reference.
+    def crashAnnotations = [
+        "AndroidComponentVersion", "Android_Board", "Android_Brand", "Android_CPU_ABI",
+        "Android_CPU_ABI2", "Android_Device", "Android_Display", "Android_Fingerprint",
+        "Android_Hardware", "Android_Manufacturer", "Android_Model", "Android_PackageName",
+        "Android_ProcessName", "Android_Version", "ApplicationBuildID",
+        "ApplicationServicesVersion", "Breadcrumbs", "BuildID", "CPUArchitecture",
+        "CrashEventID", "CrashTime", "CrashType", "DistributionID", "GeckoViewVersion",
+        "GleanVersion", "InstallTime", "JavaException", "JavaStackTrace",
+        "MinidumpSha256Hash", "OS", "OSVersion", "ProcessType", "ProductID", "ProductName",
+        "ReleaseChannel", "RemoteType", "StartupTime", "Vendor", "Version",
+        "additional_minidumps", "useragent_locale",
+    ]
+    def crashServiceDir = new File(topobjdir,
+        "mobile/android/android-components/components/lib/crash/src/main/java/mozilla/components/lib/crash/service")
+    crashServiceDir.mkdirs()
+    new File(crashServiceDir, "CrashReport.kt").text = """\
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+package mozilla.components.lib.crash.service
+
+/**
+ * Stand-in for the CrashReport.kt that Mozilla's build system generates from
+ * toolkit/crashreporter/CrashAnnotations.yaml. Only annotations referenced by this source tree are
+ * declared; each entry name is the annotation key (the enum's toString() is its name).
+ */
+object CrashReport {
+    @Suppress("EnumNaming", "EnumEntryName")
+    enum class Annotation {
+${crashAnnotations.collect { "        ${it}," }.join("\n")}
+    }
+}
+"""
+
     gradle.ext.mozconfig = [
-        topsrcdir: resolvedTopsrcdir,
-        topobjdir: "${resolvedTopsrcdir}/.topobjdir".toString(),
+        topsrcdir: topsrcdir,
+        topobjdir: topobjdir,
         substs: [
-            MOZ_APPSERVICES_IN_TREE: "0",
             ANDROID_BUILD_TOOLS_VERSION: "36.0.0",
+            MOZ_APP_VERSION: appVersion,
+            MOZ_UPDATE_CHANNEL: "nightly",
+            MOZ_ANDROID_FAT_AAR_ARCHITECTURES: "armeabi-v7a,arm64-v8a,x86_64,x86",
         ],
     ]
 
-    // MODIFIED — the original mozconfig.gradle also defines gradle.ext.configureMavenRepositories,
-    // a closure most of the included plugin sub-builds (../gradle/plugins/conventions,
-    // ../android-components/plugins/*, ../gradle/plugins/nimbus-gradle-plugin) call directly as
-    // `gradle.configureMavenRepositories(delegate)`, and which several of them ALSO copy down from
-    // `gradle.root`/`gradle.parent` alongside mozconfig whenever gradle.root already has a
-    // "mozconfig" property — which it now does, because of the line above. Without this, those
-    // sub-builds crash with "Cannot get property 'configureMavenRepositories' ... as it does not
-    // exist" the moment Gradle tries to resolve them. Defined here as a plain closure so it
-    // propagates the same way mozconfig does.
+    // mozconfig.gradle also defines gradle.ext.configureMavenRepositories, which the included
+    // plugin builds call as `gradle.configureMavenRepositories(delegate)`. Mozilla's own Maven
+    // hosts GeckoView, application-services and Glean.
     gradle.ext.configureMavenRepositories = { repositoryHandler ->
         repositoryHandler.google()
         repositoryHandler.mavenCentral()
         repositoryHandler.gradlePluginPortal()
         repositoryHandler.maven { url "https://maven.mozilla.org/maven2" }
+        repositoryHandler.maven { url "https://nightly.maven.mozilla.org/maven2" }
     }
 
     repositories {
@@ -93,11 +132,8 @@ ext.topsrcdir = rootProject.projectDir.absolutePath.minus("mobile/android/fenix"
 
 apply from: file('../shared-settings.gradle')
 
-// MODIFIED — the original guarded application-services inclusion on
-// gradle.ext.mozconfig.substs.*, which no longer exists (see above). Since
-// application-services (third_party/application-services) is not present in
-// this build's source tree at all, this block is skipped unconditionally
-// rather than guessing at the substs values it depended on.
+// application-services is consumed as published Maven artifacts (see ApplicationServices.kt), so it is
+// not included in-tree here.
 
 include ':app'
 include ':app:longfox'
