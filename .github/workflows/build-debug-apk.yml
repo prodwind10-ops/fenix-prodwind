@@ -31,6 +31,9 @@ concurrency:
 env:
   # 14-digit build ID of a published org.mozilla.geckoview:geckoview-nightly-omni:158.0.<id>.
   MOZ_BUILD_DATE: ${{ inputs.gecko_build_id || '20260916202159' }}
+  # The glean_parser release series the Glean Gradle plugin asks for (see the build log line
+  # "Requires glean_parser X.Y").
+  GLEAN_PARSER_SPEC: '20.1'
 
 jobs:
   build-debug-apk:
@@ -77,6 +80,15 @@ jobs:
           grep -q "BEGIN ICANN DOMAINS" netwerk/dns/effective_tld_names.dat
           echo "Public Suffix List: $(wc -l < netwerk/dns/effective_tld_names.dat) lines"
 
+      - name: Create Python venv with glean_parser
+        # Mozilla's `./mach` normally provides this venv. The Glean Gradle plugin prints which
+        # glean_parser it needs ("Requires glean_parser X.Y"); `~=X.Y` accepts any compatible release.
+        run: |
+          python3 -m venv .topobjdir/glean-venv
+          .topobjdir/glean-venv/bin/python -m pip install --quiet --upgrade pip
+          .topobjdir/glean-venv/bin/python -m pip install --quiet "glean_parser~=${GLEAN_PARSER_SPEC}"
+          .topobjdir/glean-venv/bin/python -m pip show glean_parser | head -n 2
+
       - name: Check the pinned GeckoView build exists
         run: |
           APP_VERSION="$(head -n 1 mobile/android/version.txt | sed 's/a[0-9]*$//')"
@@ -103,17 +115,25 @@ jobs:
         shell: bash
         working-directory: mobile/android/fenix
         run: |
+          # Everything printed from here on is also written to gradle-build.log (uploaded on failure).
+          exec > >(tee "${GITHUB_WORKSPACE}/gradle-build.log") 2>&1
+          trap 'sleep 2' EXIT   # give tee a moment to flush the last lines
           chmod +x ./gradlew
           MEM_GB="$(awk '/MemTotal/ {printf "%d", $2/1024/1024}' /proc/meminfo)"
           if [ "${MEM_GB}" -ge 14 ]; then GRADLE_XMX=6g; KOTLIN_XMX=5g; else GRADLE_XMX=3g; KOTLIN_XMX=3g; fi
-          echo "Runner memory: ${MEM_GB} GB -> Gradle heap ${GRADLE_XMX}, Kotlin daemon heap ${KOTLIN_XMX}"
+          echo "== Environment =="
+          echo "cpus=$(nproc) memory=${MEM_GB}GB heap: gradle=${GRADLE_XMX} kotlin=${KOTLIN_XMX}"
+          java -version 2>&1 | head -n 1
+          python3 --version
+          echo "ANDROID_HOME=${ANDROID_HOME} MOZ_BUILD_DATE=${MOZ_BUILD_DATE}"
+          df -h / | tail -n 1
+          echo "== Gradle =="
           # --no-configuration-cache: the objdir stand-ins (CrashReport.kt, buildid.h) are created while
           # settings.gradle is evaluated, which a configuration-cache hit would skip.
           ./gradlew :app:assembleDebug \
             --stacktrace --no-daemon --no-configuration-cache --build-cache --console=plain \
             "-Dorg.gradle.jvmargs=-Xmx${GRADLE_XMX} -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError" \
-            "-Pkotlin.daemon.jvmargs=-Xmx${KOTLIN_XMX} -XX:+UseParallelGC" \
-            2>&1 | tee "${GITHUB_WORKSPACE}/gradle-build.log"
+            "-Pkotlin.daemon.jvmargs=-Xmx${KOTLIN_XMX} -XX:+UseParallelGC"
 
       - name: Summarize failure
         if: failure()

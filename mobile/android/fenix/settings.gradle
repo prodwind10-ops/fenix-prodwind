@@ -23,8 +23,9 @@ pluginManagement {
     //    keeps that coordinate free of the "-SNAPSHOT" and per-ABI suffixes (which only exist for
     //    local Gecko builds / automation).
     //  - ANDROID_BUILD_TOOLS_VERSION: read unconditionally by ProjectPlugin.
-    //  - Anything not listed (MOZILLA_OFFICIAL, MOZ_AUTOMATION, GRADLE_GLEAN_PARSER_VENV, ...) is
-    //    deliberately left undefined, which is what a plain local debug build looks like.
+    //  - GRADLE_GLEAN_PARSER_VENV: see below.
+    //  - Anything not listed (MOZILLA_OFFICIAL, MOZ_AUTOMATION, ...) is deliberately left
+    //    undefined, which is what a plain local debug build looks like.
     // ---------------------------------------------------------------------------------------
     def topsrcdir = rootProject.projectDir.toPath().resolve("../../..").normalize().toString()
     def topobjdir = new File(topsrcdir, ".topobjdir").path
@@ -78,15 +79,29 @@ ${crashAnnotations.collect { "        ${it}," }.join("\n")}
 }
 """
 
+    def substs = [
+        ANDROID_BUILD_TOOLS_VERSION: "36.0.0",
+        MOZ_APP_VERSION: appVersion,
+        MOZ_UPDATE_CHANNEL: "nightly",
+        MOZ_ANDROID_FAT_AAR_ARCHITECTURES: "armeabi-v7a,arm64-v8a,x86_64,x86",
+    ]
+
+    // Python virtualenv containing `glean_parser`, used by the Glean Gradle plugin to generate the
+    // telemetry metric classes. In mozilla-central `./mach` creates it; here the CI workflow (or
+    // you, locally) creates it at .topobjdir/glean-venv or points GRADLE_GLEAN_PARSER_VENV at one.
+    // It must contain a glean_parser compatible with what the plugin prints as
+    // "Requires glean_parser X.Y" (install `glean_parser~=X.Y`). Without an external venv the Glean
+    // plugin falls back to a mode that needs the unrelated com.jetbrains.python.envs plugin, which
+    // neither Fenix nor android-components apply.
+    def gleanVenv = System.getenv("GRADLE_GLEAN_PARSER_VENV") ?: new File(topobjdir, "glean-venv").path
+    if (new File(gleanVenv, "bin/python").exists()) {
+        substs.GRADLE_GLEAN_PARSER_VENV = gleanVenv
+    }
+
     gradle.ext.mozconfig = [
         topsrcdir: topsrcdir,
         topobjdir: topobjdir,
-        substs: [
-            ANDROID_BUILD_TOOLS_VERSION: "36.0.0",
-            MOZ_APP_VERSION: appVersion,
-            MOZ_UPDATE_CHANNEL: "nightly",
-            MOZ_ANDROID_FAT_AAR_ARCHITECTURES: "armeabi-v7a,arm64-v8a,x86_64,x86",
-        ],
+        substs: substs,
     ]
 
     // mozconfig.gradle also defines gradle.ext.configureMavenRepositories, which the included
