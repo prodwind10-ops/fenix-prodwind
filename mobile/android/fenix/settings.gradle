@@ -155,6 +155,20 @@ include ':app:longfox'
 include ':mozilla-detekt-rules'
 include ':benchmark'
 
+// Not part of the upstream source. Mozilla's conventions plugin (ProjectPlugin.kt) compiles every
+// Kotlin module with allWarningsAsErrors. The version catalog in this repository comes from a
+// slightly later point in mozilla-central than the source snapshot, so a library can deprecate an
+// API that the snapshot's code still calls, and under -Werror each such warning fails the build.
+// This action is registered after the plugin's own (settings plugins are applied first), so it
+// runs later for every Kotlin compile task and turns the flag back off.
+gradle.allprojects {
+    tasks.configureEach { task ->
+        if (task.getClass().name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
+            task.compilerOptions.allWarningsAsErrors.set(false)
+        }
+    }
+}
+
 mozilla {
     disableAndroidComponentsTasks = true
 }

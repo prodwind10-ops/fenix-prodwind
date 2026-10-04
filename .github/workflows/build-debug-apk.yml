@@ -39,7 +39,7 @@ jobs:
   build-debug-apk:
     name: Assemble debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 300
 
     steps:
       - name: Check out repository
@@ -52,6 +52,17 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL \
                       "${ANDROID_HOME:-/usr/local/lib/android/sdk}/ndk" || true
           df -h / | tail -n 1
+
+      - name: Add swap space
+        # Private-repo runners have 7 GB of RAM; Gradle plus the Kotlin compiler daemon can exceed
+        # that at peaks, and the kernel would kill a process instead of slowing down.
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile > /dev/null
+          sudo swapon /swapfile
+          free -m | head -n 3
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -130,8 +141,10 @@ jobs:
           echo "== Gradle =="
           # --no-configuration-cache: the objdir stand-ins (CrashReport.kt, buildid.h) are created while
           # settings.gradle is evaluated, which a configuration-cache hit would skip.
+          # --continue: keep building independent modules after a failure, so one run reports every
+          # failing module instead of only the first.
           ./gradlew :app:assembleDebug \
-            --stacktrace --no-daemon --no-configuration-cache --build-cache --console=plain \
+            --continue --stacktrace --no-daemon --no-configuration-cache --build-cache --console=plain \
             "-Dorg.gradle.jvmargs=-Xmx${GRADLE_XMX} -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError" \
             "-Pkotlin.daemon.jvmargs=-Xmx${KOTLIN_XMX} -XX:+UseParallelGC"
 
@@ -142,14 +155,19 @@ jobs:
           {
             echo "## Build failed"
             echo
+            echo "### Failed tasks"
+            echo '```'
+            (grep -oE "Execution failed for task '[^']+'" gradle-build.log | sort -u || true) | head -n 40
+            echo '```'
+            echo
             echo "### Gradle failure"
             echo '```'
-            (grep -n -m1 -A30 "^FAILURE:" gradle-build.log || tail -n 60 gradle-build.log) | cut -c1-400
+            (grep -n -m1 -A40 "^FAILURE:" gradle-build.log || tail -n 60 gradle-build.log) | cut -c1-400
             echo '```'
             echo
             echo "### First compiler / resolution errors"
             echo '```'
-            (grep -nE "^e: |Could not (resolve|find|GET|HEAD)|Unresolved reference|Execution failed for task" gradle-build.log | head -n 40 || true) | cut -c1-400
+            (grep -nE "^e: |: error: |Could not (resolve|find|GET|HEAD)|Unresolved reference|OutOfMemoryError|Killed" gradle-build.log | sed -E 's#file:///home/runner/work/[^/]+/[^/]+/##' | head -n 60 || true) | cut -c1-400
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
