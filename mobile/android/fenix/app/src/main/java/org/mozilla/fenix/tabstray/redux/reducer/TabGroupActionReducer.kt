@@ -81,6 +81,10 @@ object TabGroupActionReducer {
                 state.copy(
                     tabGroupState = state.tabGroupState.copy(dragProcessingState = DragProcessingState.COMPLETED)
                 )
+            // The lock is persisted by TabManagerUiStateStorageMiddleware and re-applied to the state when the
+            // persisted UI state update arrives (see TabsTrayReducer.handleTabUpdates), so there is nothing to
+            // reduce here.
+            is TabGroupAction.ToggleGroupLocked -> state
         }
     }
 

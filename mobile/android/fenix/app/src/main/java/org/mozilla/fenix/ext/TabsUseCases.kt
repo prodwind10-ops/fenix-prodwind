@@ -4,6 +4,8 @@
 
 package org.mozilla.fenix.ext
 
+import mozilla.components.browser.state.selector.normalTabs
+import mozilla.components.browser.state.selector.privateTabs
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.feature.tabs.TabsUseCases
 import org.mozilla.fenix.utils.Settings

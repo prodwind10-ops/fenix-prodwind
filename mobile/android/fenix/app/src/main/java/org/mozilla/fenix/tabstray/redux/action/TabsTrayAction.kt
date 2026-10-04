@@ -160,6 +160,9 @@ sealed interface TabsTrayAction : Action {
      * @property tab The [TabsTrayItem.Tab] to lock or unlock.
      * @property locked The new locked state to apply.
      */
+    data class ToggleTabLocked(val tab: TabsTrayItem.Tab, val locked: Boolean) :
+        TabsTrayAction, TabManagerUiStateStorageAction
+
     /**
      * Fired when the user clicks to lock or unlock every currently selected [TabsTrayItem.Tab] in multiselect mode.
      * Tabs that belong to a locked tab group are unaffected, since group-level locking is independent of individual

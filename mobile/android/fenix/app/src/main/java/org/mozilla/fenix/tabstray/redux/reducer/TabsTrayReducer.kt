@@ -76,7 +76,11 @@ internal object TabsTrayReducer {
                 is TabsTrayAction.CloseAllPrivateTabs,
                 is TabsTrayAction.BookmarkSelectedTabs,
                 is TabsTrayAction.ThreeDotMenuShown,
-                is TabsTrayAction.ReorderTabsTrayItem -> state
+                is TabsTrayAction.ReorderTabsTrayItem,
+                // Lock changes are persisted by TabManagerUiStateStorageMiddleware and re-applied to the state when
+                // the persisted UI state update arrives (see handleTabUpdates).
+                is TabsTrayAction.ToggleTabLocked,
+                is TabsTrayAction.ToggleSelectedTabsLocked -> state
             }
 
         require(newState.backStack.isNotEmpty()) {
@@ -271,14 +275,6 @@ internal object TabsTrayReducer {
             }
             is TabsTrayAction.PersistedUiStateUpdateReceived ->
                 state.copy(
-                    tabGroupState =
-                        state.tabGroupState.copy(
-                            hasUserDismissedTabGroupOnboarding = action.update.hasUserDismissedTabGroupOnboarding,
-                            tabGroupOnboardingImpressionCount = action.update.tabGroupOnboardingImpressionCount,
-                            hasUserEverHadOneTabGroup = action.update.hasUserEverHadOneTabGroup,
-                            hasViewedTabGroupsPage = action.update.hasViewedTabGroupsPage,
-                            skipUngroupConfirmation = action.update.skipUngroupConfirmation,
-                        ),
                     // Re-apply the newly persisted lock IDs to already-loaded tab data immediately, rather than
                     // waiting for the next TabDataUpdateReceived, so a lock/unlock is reflected without delay.
                     normalTabsState =
@@ -306,13 +302,18 @@ internal object TabsTrayReducer {
                         ),
                     tabGroupState =
                         state.tabGroupState.copy(
+                            hasUserDismissedTabGroupOnboarding = action.update.hasUserDismissedTabGroupOnboarding,
+                            tabGroupOnboardingImpressionCount = action.update.tabGroupOnboardingImpressionCount,
+                            hasUserEverHadOneTabGroup = action.update.hasUserEverHadOneTabGroup,
+                            hasViewedTabGroupsPage = action.update.hasViewedTabGroupsPage,
+                            skipUngroupConfirmation = action.update.skipUngroupConfirmation,
                             groups =
                                 state.tabGroupState.groups.map {
                                     it.withLockApplied(
                                         lockedTabIds = action.update.lockedTabIds,
                                         lockedGroupIds = action.update.lockedGroupIds,
                                     )
-                                }
+                                },
                         ),
                     lockedTabIds = action.update.lockedTabIds,
                     lockedGroupIds = action.update.lockedGroupIds,

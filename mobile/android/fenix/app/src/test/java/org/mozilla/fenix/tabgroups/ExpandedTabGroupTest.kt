@@ -319,21 +319,25 @@ class ExpandedTabGroupTest {
     private fun expandedTabGroupActions(
         onItemClick: (TabsTrayItem) -> Unit = {},
         onTabClose: (TabsTrayItem.Tab) -> Unit = {},
+        onTabToggleLock: (TabsTrayItem.Tab) -> Unit = {},
         onDeleteTabGroupClick: () -> Unit = {},
         onEditTabGroupClick: () -> Unit = {},
         onCloseTabGroupClick: () -> Unit = {},
         onUngroupTabGroupClick: () -> Unit = {},
         onAddNewTabClick: (() -> Unit)? = {},
         onShareTabGroupClick: () -> Unit = {},
+        onToggleLockTabGroupClick: () -> Unit = {},
     ) =
         ExpandedTabGroupActions(
             onItemClick = onItemClick,
             onTabClose = onTabClose,
+            onTabToggleLock = onTabToggleLock,
             onDeleteTabGroupClick = onDeleteTabGroupClick,
             onEditTabGroupClick = onEditTabGroupClick,
             onCloseTabGroupClick = onCloseTabGroupClick,
             onUngroupTabGroupClick = onUngroupTabGroupClick,
             onAddNewTabClick = onAddNewTabClick,
             onShareTabGroupClick = onShareTabGroupClick,
+            onToggleLockTabGroupClick = onToggleLockTabGroupClick,
         )
 }

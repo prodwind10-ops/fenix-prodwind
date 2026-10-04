@@ -56,7 +56,9 @@ import org.mozilla.fenix.ext.DEFAULT_ACTIVE_DAYS
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.openToBrowser
 import org.mozilla.fenix.ext.potentialInactiveTabs
-import org.mozilla.fenix.ext.removeAllActiveNormalTabs
+import org.mozilla.fenix.ext.removeAllActiveUnlockedNormalTabs
+import org.mozilla.fenix.ext.removeAllUnlockedNormalTabs
+import org.mozilla.fenix.ext.removeAllUnlockedPrivateTabs
 import org.mozilla.fenix.home.HomeScreenViewModel.Companion.ALL_ACTIVE_NORMAL_TABS
 import org.mozilla.fenix.home.HomeScreenViewModel.Companion.ALL_NORMAL_TABS
 import org.mozilla.fenix.home.HomeScreenViewModel.Companion.ALL_PRIVATE_TABS
