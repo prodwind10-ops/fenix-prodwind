@@ -82,7 +82,12 @@ google-java-format = "1.28.0"
 ktfmt = "0.64"
 spotless = "8.10.2"
 # Mozilla
-glean = "70.2.1"
+# NOTE (fenix-prodwind): upstream's catalog says 70.2.1, but that is newer than this repo's source snapshot.
+# On Android, Glean's native code comes from GeckoView (libxul), not from this library, so this version must
+# not be newer than the glean-core inside the GeckoView build pinned by MOZ_BUILD_DATE in the CI workflow
+# (nightly 2026-09-16). 70.1.0 added glean_clear_stored_submitted_pings, which that GeckoView lacks, causing an
+# UnsatisfiedLinkError at startup. 70.0.0 was the release current on the snapshot date.
+glean = "70.0.0"
 # Testing libraries
 androidx-test = "1.7.0"
 androidx-test-espresso = "3.7.0"
