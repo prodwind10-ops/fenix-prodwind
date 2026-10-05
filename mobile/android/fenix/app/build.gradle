@@ -54,7 +54,10 @@ android {
         applicationId "dev.personal.fenixfork"
         minSdk config.minSdkVersion
         targetSdk config.targetSdkVersion
-        versionCode 1
+        // MODIFIED (fork) — upstream hardcodes 1. Every debug build then carries the same versionCode, so Android
+        // cannot tell a newer CI build from the one installed. CI sets GITHUB_RUN_NUMBER, which only ever goes up.
+        // (nightly/beta/release/benchmark builds override this per ABI further down; local builds stay at 1.)
+        versionCode Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")
         versionName Config.generateDebugVersionName()
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

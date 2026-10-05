@@ -48,6 +48,34 @@ class TabsTrayStoreReducerTest {
     }
 
     @Test
+    fun `GIVEN multiselect mode WHEN the selected tabs are locked THEN select mode is exited`() {
+        val tab = createTab("https://mozilla.org")
+        val initialState = TabsTrayState(mode = Mode.Select(selectedTabs = setOf(tab)))
+
+        val resultState =
+            TabsTrayReducer.reduce(
+                initialState,
+                TabsTrayAction.ToggleSelectedTabsLocked(tabs = setOf(tab), locked = true),
+            )
+
+        assertEquals(Mode.Normal, resultState.mode)
+    }
+
+    @Test
+    fun `GIVEN multiselect mode WHEN the selected tabs are unlocked THEN select mode is exited`() {
+        val tab = createTab("https://mozilla.org")
+        val initialState = TabsTrayState(mode = Mode.Select(selectedTabs = setOf(tab)))
+
+        val resultState =
+            TabsTrayReducer.reduce(
+                initialState,
+                TabsTrayAction.ToggleSelectedTabsLocked(tabs = setOf(tab), locked = false),
+            )
+
+        assertEquals(Mode.Normal, resultState.mode)
+    }
+
+    @Test
     fun `WHEN PageSelected THEN the selected page is updated`() {
         val resultState =
             TabsTrayReducer.reduce(

@@ -82,6 +82,14 @@ jobs:
         run: |
           yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Use the fixed debug signing key
+        # GitHub runners are fresh machines, so without this each run would sign the APK with a newly generated
+        # random debug key and Android would refuse to install a build over the previous one. This is the standard
+        # public debug key (password "android"), not a secret.
+        run: |
+          mkdir -p ~/.android
+          cp .github/keys/debug.keystore ~/.android/debug.keystore
+
       - name: Fetch Public Suffix List
         run: |
           mkdir -p netwerk/dns

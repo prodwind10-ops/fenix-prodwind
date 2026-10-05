@@ -79,8 +79,16 @@ internal object TabsTrayReducer {
                 is TabsTrayAction.ReorderTabsTrayItem,
                 // Lock changes are persisted by TabManagerUiStateStorageMiddleware and re-applied to the state when
                 // the persisted UI state update arrives (see handleTabUpdates).
-                is TabsTrayAction.ToggleTabLocked,
-                is TabsTrayAction.ToggleSelectedTabsLocked -> state
+                is TabsTrayAction.ToggleTabLocked -> state
+
+                // Locking or unlocking the selection is a one-shot bulk action, so leave select mode once it has
+                // been dispatched. The action carries the tabs itself, so the middleware does not need the selection.
+                is TabsTrayAction.ToggleSelectedTabsLocked ->
+                    if (state.mode is TabsTrayState.Mode.Select) {
+                        state.copy(mode = TabsTrayState.Mode.Normal)
+                    } else {
+                        state
+                    }
             }
 
         require(newState.backStack.isNotEmpty()) {
