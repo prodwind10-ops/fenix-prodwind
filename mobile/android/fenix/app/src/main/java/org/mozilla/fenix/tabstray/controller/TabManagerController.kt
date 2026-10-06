@@ -6,6 +6,7 @@ package org.mozilla.fenix.tabstray.controller
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.annotation.ColorInt
 import androidx.annotation.VisibleForTesting
 import androidx.navigation.NavController
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.action.DebugAction
 import mozilla.components.browser.state.action.LastAccessAction
+import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
 import mozilla.components.browser.state.selector.selectedTab
@@ -66,6 +68,7 @@ import org.mozilla.fenix.share.ShareFragment
 import org.mozilla.fenix.tabstray.SyncedTabsController
 import org.mozilla.fenix.tabstray.browser.InactiveTabsController
 import org.mozilla.fenix.tabstray.browser.TabsTrayFabController
+import org.mozilla.fenix.shortcut.LockedTabShortcut
 import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.data.toTabList
 import org.mozilla.fenix.tabstray.ext.isActiveDownload
@@ -191,6 +194,26 @@ interface TabManagerController : SyncedTabsController, InactiveTabsController, T
      * (normal or private tabs); the other page's tabs are left untouched.
      */
     fun onRefreshAllTabsClicked()
+
+    /**
+     * Called when clicking the return locked tabs to their root pages menu item. Navigates every locked tab on the
+     * currently selected page (normal or private tabs) back to its root URL, the page it was on when it was locked.
+     * Locked tabs already on their root page, unlocked tabs and the other page's tabs are left untouched.
+     */
+    fun onReturnLockedTabsToRootClicked()
+
+    /**
+     * Called when choosing to return the selected locked tabs to their root pages. Leaves select mode afterwards.
+     */
+    fun onReturnSelectedTabsToRootClicked()
+
+    /**
+     * Called when choosing to add a Home screen shortcut that opens the given locked [tab] instead of creating a new
+     * one. Leaves select mode afterwards.
+     *
+     * @param tab The locked tab to create the shortcut for.
+     */
+    fun onAddTabToHomeScreenClicked(tab: TabsTrayItem.Tab)
 
     /** Called when cancelling private downloads confirmed. */
     fun onCloseAllPrivateTabsWarningConfirmed(private: Boolean)
@@ -844,6 +867,39 @@ class DefaultTabManagerController(
             }
         tabIds.forEach { tabId -> sessionUseCases.reload(tabId) }
         TabsTray.refreshedAllTabs.record(NoExtras())
+    }
+
+    override fun onReturnLockedTabsToRootClicked() {
+        val isPrivate = tabsTrayStore.state.selectedPage == Page.PrivateTabs
+        val tabs = if (isPrivate) browserStore.state.privateTabs else browserStore.state.normalTabs
+        returnTabsToRoot(tabs.map { it.id })
+    }
+
+    override fun onReturnSelectedTabsToRootClicked() {
+        returnTabsToRoot(tabsTrayStore.state.mode.selectedTabs.map { it.id })
+        tabsTrayStore.dispatch(TabsTrayAction.ExitSelectMode)
+    }
+
+    override fun onAddTabToHomeScreenClicked(tab: TabsTrayItem.Tab) {
+        if (!LockedTabShortcut.requestPin(context, tab)) {
+            Toast.makeText(context, R.string.locked_tab_shortcut_not_supported, Toast.LENGTH_LONG).show()
+        }
+        tabsTrayStore.dispatch(TabsTrayAction.ExitSelectMode)
+    }
+
+    /**
+     * Navigates each of the tabs with [tabIds] that is locked and has a root URL back to that URL. A tab that is already
+     * showing its root URL is skipped so it keeps its scroll position and page state. This is a normal navigation, so
+     * the page the tab was on stays in its history and the back button returns to it.
+     */
+    private fun returnTabsToRoot(tabIds: Collection<String>) {
+        val state = tabsTrayStore.state
+        tabIds.filter { it in state.lockedTabIds }.forEach { tabId ->
+            val rootUrl = state.lockedTabRootUrls[tabId] ?: return@forEach
+            if (browserStore.state.findTab(tabId)?.content?.url != rootUrl) {
+                sessionUseCases.loadUrl(url = rootUrl, sessionId = tabId)
+            }
+        }
     }
 
     override fun onOpenRecentlyClosedClicked() {

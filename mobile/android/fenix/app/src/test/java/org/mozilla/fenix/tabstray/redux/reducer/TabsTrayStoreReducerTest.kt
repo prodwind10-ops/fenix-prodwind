@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mozilla.fenix.tabstray.data.TabStorageUpdate
+import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.data.createTab
 import org.mozilla.fenix.tabstray.data.createTabGroup
 import org.mozilla.fenix.tabstray.navigation.TabManagerNavDestination
@@ -45,6 +46,98 @@ class TabsTrayStoreReducerTest {
             )
 
         assertEquals(expectedState, resultState)
+    }
+
+    @Test
+    fun `GIVEN a tab with a custom title WHEN fresh tab data has a different page title THEN the custom title is kept`() {
+        val tab = createTab(url = "https://mozilla.org", id = "tab-1", title = "Page title")
+        val initialState = TabsTrayState(customTabTitles = mapOf("tab-1" to "My title"))
+
+        val resultState =
+            TabsTrayReducer.reduce(
+                initialState,
+                TabsTrayAction.TabDataUpdateReceived(
+                    tabStorageUpdate =
+                        TabStorageUpdate(
+                            selectedTabId = null,
+                            normalItems = listOf(tab),
+                            normalTabCount = 1,
+                            selectedNormalItemIndex = 0,
+                            inactiveTabs = emptyList(),
+                            privateTabs = emptyList(),
+                            selectedPrivateItemIndex = 0,
+                            tabGroups = emptyList(),
+                        )
+                ),
+            )
+
+        val resultTab = resultState.normalTabsState.items.filterIsInstance<TabsTrayItem.Tab>().single()
+        assertEquals("My title", resultTab.title)
+        assertEquals("Page title", resultTab.originalTitle)
+    }
+
+    @Test
+    fun `WHEN the persisted UI state has a custom title and root url for a locked tab THEN both are applied`() {
+        val tab = createTab(url = "https://mozilla.org/some/page", id = "tab-1", title = "Page title")
+        val initialState =
+            TabsTrayState(normalTabsState = TabsTrayState.NormalTabsState(items = listOf(tab), tabCount = 1))
+        val update =
+            PersistedUIState(
+                lockedTabIds = setOf("tab-1"),
+                customTabTitles = mapOf("tab-1" to "My title"),
+                lockedTabRootUrls = mapOf("tab-1" to "https://mozilla.org"),
+            )
+
+        val resultState =
+            TabsTrayReducer.reduce(initialState, TabsTrayAction.PersistedUiStateUpdateReceived(update = update))
+
+        val resultTab = resultState.normalTabsState.items.filterIsInstance<TabsTrayItem.Tab>().single()
+        assertEquals("My title", resultTab.title)
+        assertEquals("https://mozilla.org", resultTab.rootUrl)
+        assertEquals(update.customTabTitles, resultState.customTabTitles)
+        assertEquals(update.lockedTabRootUrls, resultState.lockedTabRootUrls)
+    }
+
+    @Test
+    fun `WHEN a tab is not locked THEN a stored root url is not applied to it`() {
+        val tab = createTab(url = "https://mozilla.org", id = "tab-1")
+        val initialState =
+            TabsTrayState(normalTabsState = TabsTrayState.NormalTabsState(items = listOf(tab), tabCount = 1))
+        val update = PersistedUIState(lockedTabRootUrls = mapOf("tab-1" to "https://mozilla.org"))
+
+        val resultState =
+            TabsTrayReducer.reduce(initialState, TabsTrayAction.PersistedUiStateUpdateReceived(update = update))
+
+        assertEquals(null, resultState.normalTabsState.items.filterIsInstance<TabsTrayItem.Tab>().single().rootUrl)
+    }
+
+    @Test
+    fun `WHEN the custom title is removed from the persisted UI state THEN the tab shows its page title again`() {
+        val renamedTab =
+            createTab(url = "https://mozilla.org", id = "tab-1", title = "Page title")
+                .copy(title = "My title")
+        val initialState =
+            TabsTrayState(normalTabsState = TabsTrayState.NormalTabsState(items = listOf(renamedTab), tabCount = 1))
+
+        val resultState =
+            TabsTrayReducer.reduce(
+                initialState,
+                TabsTrayAction.PersistedUiStateUpdateReceived(update = PersistedUIState()),
+            )
+
+        val resultTab = resultState.normalTabsState.items.filterIsInstance<TabsTrayItem.Tab>().single()
+        assertEquals("Page title", resultTab.title)
+    }
+
+    @Test
+    fun `GIVEN multiselect mode WHEN the selected tab is renamed THEN select mode is exited`() {
+        val tab = createTab("https://mozilla.org")
+        val initialState = TabsTrayState(mode = Mode.Select(selectedTabs = setOf(tab)))
+
+        val resultState =
+            TabsTrayReducer.reduce(initialState, TabsTrayAction.RenameTab(tab = tab, newTitle = "New name"))
+
+        assertEquals(Mode.Normal, resultState.mode)
     }
 
     @Test

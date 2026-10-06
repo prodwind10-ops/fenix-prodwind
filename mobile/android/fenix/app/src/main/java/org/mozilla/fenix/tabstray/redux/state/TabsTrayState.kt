@@ -34,6 +34,11 @@ import org.mozilla.fenix.tabstray.syncedtabs.SyncedTabsListItem
  *   incoming [TabsTrayItem.Tab]s as they are received so lock status survives tab data refreshes.
  * @property lockedGroupIds The IDs of tab groups the user has locked, as last read from the persistence layer.
  *   Applied to incoming [TabsTrayItem.TabGroup]s as they are received so lock status survives tab data refreshes.
+ * @property customTabTitles The titles the user has given to tabs (tab ID to title), as last read from the
+ *   persistence layer. Applied to incoming [TabsTrayItem.Tab]s so a renamed tab keeps its title when its page title
+ *   changes.
+ * @property lockedTabRootUrls The root URL of each locked tab (tab ID to URL), as last read from the persistence
+ *   layer. Applied to incoming locked [TabsTrayItem.Tab]s.
  */
 @Immutable
 data class TabsTrayState(
@@ -51,6 +56,8 @@ data class TabsTrayState(
     val hasTabDataLoaded: Boolean = false,
     val lockedTabIds: Set<String> = emptySet(),
     val lockedGroupIds: Set<String> = emptySet(),
+    val customTabTitles: Map<String, String> = emptyMap(),
+    val lockedTabRootUrls: Map<String, String> = emptyMap(),
 ) : State {
 
     /** Drops the last entry of [TabsTrayState.backStack]. If [backStack] only has one entry, no changes occur. */

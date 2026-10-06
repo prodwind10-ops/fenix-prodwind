@@ -19,6 +19,11 @@ internal object TabsTrayTestTag {
     const val COLLECTIONS_BUTTON = "$BANNER_ROOT.collections"
     const val SHARE_BUTTON = "$BANNER_ROOT.share"
     const val TOGGLE_LOCK_SELECTED_BUTTON = "$BANNER_ROOT.toggleLockSelected"
+    const val RENAME_SELECTED_TAB_BUTTON = "$BANNER_ROOT.renameSelectedTab"
+    const val ADD_SELECTED_TAB_TO_HOME_SCREEN_BUTTON = "$BANNER_ROOT.addSelectedTabToHomeScreen"
+    const val RETURN_SELECTED_TABS_TO_ROOT_BUTTON = "$BANNER_ROOT.returnSelectedTabsToRoot"
+    const val RENAME_TAB_DIALOG_TEXT_FIELD = "$BANNER_ROOT.renameTabDialog.textField"
+    const val RENAME_TAB_DIALOG_CONFIRM_BUTTON = "$BANNER_ROOT.renameTabDialog.confirm"
 
     // Tabs Tray Banner three dot menu
     const val THREE_DOT_BUTTON = "$BANNER_ROOT.threeDotButton"
@@ -26,6 +31,7 @@ internal object TabsTrayTestTag {
     const val ACCOUNT_SETTINGS = "$THREE_DOT_BUTTON.accountSettings"
     const val CLOSE_ALL_TABS = "$THREE_DOT_BUTTON.closeAllTabs"
     const val REFRESH_ALL_TABS = "$THREE_DOT_BUTTON.refreshAllTabs"
+    const val RETURN_LOCKED_TABS_TO_ROOT = "$THREE_DOT_BUTTON.returnLockedTabsToRoot"
     const val NEW_TAB_GROUP = "$THREE_DOT_BUTTON.newTabGroup"
     const val RECENTLY_CLOSED_TABS = "$THREE_DOT_BUTTON.recentlyClosedTabs"
     const val SELECT_TABS = "$THREE_DOT_BUTTON.selectTabs"

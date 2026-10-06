@@ -16,6 +16,10 @@ package org.mozilla.fenix.tabstray.repository.uistate.data
  *   cannot be closed individually until unlocked.
  * @property lockedGroupIds The IDs of tab groups the user has locked. A locked group is excluded from
  *   "close all tabs" and cannot be closed or deleted until unlocked.
+ * @property customTabTitles Titles the user has given to tabs, keyed by tab ID. A tab with an entry here keeps that
+ *   title in the Tab Manager no matter how its page title changes.
+ * @property lockedTabRootUrls The "root" URL of each locked tab, keyed by tab ID: the page the tab was showing when it
+ *   was locked, which the user can return the tab to after navigating away.
  */
 data class PersistedUIState(
     val hasUserDismissedTabGroupOnboarding: Boolean = false,
@@ -25,4 +29,6 @@ data class PersistedUIState(
     val skipUngroupConfirmation: Boolean = false,
     val lockedTabIds: Set<String> = emptySet(),
     val lockedGroupIds: Set<String> = emptySet(),
+    val customTabTitles: Map<String, String> = emptyMap(),
+    val lockedTabRootUrls: Map<String, String> = emptyMap(),
 )

@@ -89,6 +89,12 @@ import org.mozilla.fenix.theme.FirefoxTheme
  * @param onAccountSettingsClick Invoked when the user clicks on the account settings banner menu item.
  * @param onDeleteAllTabsClick Invoked when the user clicks on the close all tabs banner menu item.
  * @param onRefreshAllTabsClick Invoked when the user clicks on the refresh all tabs banner menu item.
+ * @param onReturnLockedTabsToRootClick Invoked when the user clicks on the return locked tabs to their root pages
+ *   banner menu item.
+ * @param onReturnSelectedTabsToRootClick Invoked when the user clicks on the return selected tabs to their root page
+ *   multi select menu item.
+ * @param onAddSelectedTabToHomeScreenClick Invoked with the selected tab when the user clicks on the add to Home
+ *   screen multi select menu item.
  * @param onBookmarkSelectedTabsClick Invoked when the user clicks on the bookmark banner menu item.
  * @param onDeleteSelectedTabsClick Invoked when the user clicks on the close selected tabs banner menu item.
  * @param onForceSelectedTabsAsInactiveClick Invoked when the user clicks on the make inactive banner menu item.
@@ -140,6 +146,9 @@ fun TabsTray(
     onAccountSettingsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
     onRefreshAllTabsClick: () -> Unit = {},
+    onReturnLockedTabsToRootClick: () -> Unit = {},
+    onReturnSelectedTabsToRootClick: () -> Unit = {},
+    onAddSelectedTabToHomeScreenClick: (TabsTrayItem.Tab) -> Unit = {},
     onBookmarkSelectedTabsClick: () -> Unit,
     onDeleteSelectedTabsClick: () -> Unit,
     onForceSelectedTabsAsInactiveClick: () -> Unit,
@@ -207,6 +216,8 @@ fun TabsTray(
                 onTabsTrayPbmLockedDismiss = onTabsTrayPbmLockedDismiss,
                 onTabAutoCloseBannerDismiss = onTabAutoCloseBannerDismiss,
                 onTabAutoCloseBannerShown = onTabAutoCloseBannerShown,
+                onReturnSelectedTabsToRootClick = onReturnSelectedTabsToRootClick,
+                onAddSelectedTabToHomeScreenClick = onAddSelectedTabToHomeScreenClick,
             )
         },
         floatingActionButton = {
@@ -221,6 +232,7 @@ fun TabsTray(
                 onAccountSettingsClick = onAccountSettingsClick,
                 onDeleteAllTabsClick = onDeleteAllTabsClick,
                 onRefreshAllTabsClick = onRefreshAllTabsClick,
+                onReturnLockedTabsToRootClick = onReturnLockedTabsToRootClick,
             )
         },
         floatingActionButtonPosition = FabPosition.Center,

@@ -427,6 +427,12 @@ class TabManagementFragment : Fragment() {
                                             )
                                         },
                                         onRefreshAllTabsClick = tabManagerController::onRefreshAllTabsClicked,
+                                        onReturnLockedTabsToRootClick =
+                                            tabManagerController::onReturnLockedTabsToRootClicked,
+                                        onReturnSelectedTabsToRootClick =
+                                            tabManagerController::onReturnSelectedTabsToRootClicked,
+                                        onAddSelectedTabToHomeScreenClick =
+                                            tabManagerController::onAddTabToHomeScreenClicked,
                                         onDeleteSelectedTabsClick = tabManagerInteractor::onDeleteSelectedTabsClicked,
                                         onBookmarkSelectedTabsClick =
                                             tabManagerInteractor::onBookmarkSelectedTabsClicked,

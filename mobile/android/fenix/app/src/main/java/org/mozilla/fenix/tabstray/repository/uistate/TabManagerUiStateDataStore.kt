@@ -9,6 +9,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 
@@ -35,3 +36,15 @@ internal val lockedTabIdsKey = stringSetPreferencesKey("lockedTabIdsKey")
 
 /** Datastore key for reading/writing the set of tab group IDs the user has locked. */
 internal val lockedGroupIdsKey = stringSetPreferencesKey("lockedGroupIdsKey")
+
+/**
+ * Datastore key for reading/writing the titles the user has given to tabs. The value is a JSON object mapping tab IDs
+ * to titles; see [toJsonString] and [toStringMap].
+ */
+internal val customTabTitlesKey = stringPreferencesKey("customTabTitlesKey")
+
+/**
+ * Datastore key for reading/writing the root URL of each locked tab. The value is a JSON object mapping tab IDs to
+ * URLs; see [toJsonString] and [toStringMap].
+ */
+internal val lockedTabRootUrlsKey = stringPreferencesKey("lockedTabRootUrlsKey")

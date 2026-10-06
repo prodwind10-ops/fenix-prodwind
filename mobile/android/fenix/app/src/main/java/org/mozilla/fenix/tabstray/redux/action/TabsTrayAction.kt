@@ -164,6 +164,17 @@ sealed interface TabsTrayAction : Action {
         TabsTrayAction, TabManagerUiStateStorageAction
 
     /**
+     * Fired when the user renames a tab. The custom title is persisted and re-applied to the tab whenever tab data is
+     * rebuilt, so later page title changes do not affect it.
+     *
+     * @property tab The [TabsTrayItem.Tab] being renamed.
+     * @property newTitle The title to give the tab. Null or blank removes the custom title, so the tab shows its page
+     *   title again.
+     */
+    data class RenameTab(val tab: TabsTrayItem.Tab, val newTitle: String?) :
+        TabsTrayAction, TabManagerUiStateStorageAction
+
+    /**
      * Fired when the user clicks to lock or unlock every currently selected [TabsTrayItem.Tab] in multiselect mode.
      * Tabs that belong to a locked tab group are unaffected, since group-level locking is independent of individual
      * tab locking.

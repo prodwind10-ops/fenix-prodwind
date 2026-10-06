@@ -1452,6 +1452,26 @@
     <string name="tab_manager_multiselect_menu_item_lock">Lock selected tabs</string>
     <!-- Text shown in the multiselect menu for unlocking every selected tab. Shown when every currently selected tab is locked. -->
     <string name="tab_manager_multiselect_menu_item_unlock">Unlock selected tabs</string>
+    <!-- Text shown in the multiselect menu for renaming the selected tab. Only shown when exactly one tab is selected. -->
+    <string name="tab_manager_multiselect_menu_item_rename">Rename tab</string>
+    <!-- Text shown in the multiselect menu for adding a shortcut to the selected tab on the Home screen. Only shown when exactly one locked tab is selected. -->
+    <string name="tab_manager_multiselect_menu_item_add_to_home_screen">Add to Home screen</string>
+    <!-- Text shown in the multiselect menu for returning the selected locked tabs to the page they were on when they were locked (their root page). -->
+    <string name="tab_manager_multiselect_menu_item_return_to_root">Return to root page</string>
+    <!-- Text shown in the tab manager menu for returning every locked tab to the page it was on when it was locked (its root page). -->
+    <string name="tab_tray_menu_item_return_locked_to_root">Return locked tabs to root pages</string>
+    <!-- Title of the dialog for renaming a tab. -->
+    <string name="tab_rename_dialog_title">Rename tab</string>
+    <!-- Label of the text field in the dialog for renaming a tab. -->
+    <string name="tab_rename_dialog_label">Tab name</string>
+    <!-- Hint shown below the text field in the dialog for renaming a tab. -->
+    <string name="tab_rename_dialog_hint">Leave empty to use the page title</string>
+    <!-- Label of the button that saves the new tab name. -->
+    <string name="tab_rename_dialog_confirm_button">Save</string>
+    <!-- Label of the button that closes the rename tab dialog without renaming. -->
+    <string name="tab_rename_dialog_cancel_button">Cancel</string>
+    <!-- Message shown when the device's launcher does not support adding a tab shortcut to the Home screen. -->
+    <string name="locked_tab_shortcut_not_supported">Your launcher does not support adding shortcuts to the Home screen.</string>
     <!-- Content description for tabs tray multiselect menu -->
     <string name="tab_tray_multiselect_menu_content_description">Selected tabs menu</string>
     <!-- Title text displayed for a homepage tab in the tabs tray. -->

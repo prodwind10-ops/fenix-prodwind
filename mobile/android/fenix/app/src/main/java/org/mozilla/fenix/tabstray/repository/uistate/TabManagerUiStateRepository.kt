@@ -53,6 +53,18 @@ interface TabManagerUiStateRepository {
 
     /** Marks the tab group with [groupId] as unlocked. */
     suspend fun unlockGroup(groupId: String): Boolean
+
+    /**
+     * Gives the tab with [tabId] a custom title that is kept regardless of its page title. A null or blank [title]
+     * removes the custom title so the tab shows its page title again.
+     */
+    suspend fun setTabCustomTitle(tabId: String, title: String?): Boolean
+
+    /**
+     * Records [url] as the root URL of the locked tab with [tabId]. A null or blank [url] removes the root URL, which
+     * is what happens when the tab is unlocked.
+     */
+    suspend fun setTabRootUrl(tabId: String, url: String?): Boolean
 }
 
 /**
@@ -96,6 +108,8 @@ internal constructor(
                     skipUngroupConfirmation = preferences[skipUngroupConfirmationKey] ?: false,
                     lockedTabIds = preferences[lockedTabIdsKey] ?: emptySet(),
                     lockedGroupIds = preferences[lockedGroupIdsKey] ?: emptySet(),
+                    customTabTitles = preferences[customTabTitlesKey].toStringMap(),
+                    lockedTabRootUrls = preferences[lockedTabRootUrlsKey].toStringMap(),
                 )
             }
             .stateIn(
@@ -145,6 +159,22 @@ internal constructor(
         preferences[lockedGroupIdsKey] = currentLockedGroupIds - groupId
     }
 
+    override suspend fun setTabCustomTitle(tabId: String, title: String?): Boolean = updateDataStore { preferences ->
+        val updated = preferences[customTabTitlesKey].toStringMap().withEntry(tabId, title)
+        preferences[customTabTitlesKey] = updated.toJsonString()
+    }
+
+    override suspend fun setTabRootUrl(tabId: String, url: String?): Boolean = updateDataStore { preferences ->
+        val updated = preferences[lockedTabRootUrlsKey].toStringMap().withEntry(tabId, url)
+        preferences[lockedTabRootUrlsKey] = updated.toJsonString()
+    }
+
+    /** Returns a copy of this map with [key] set to [value], or removed when [value] is null or blank. */
+    private fun Map<String, String>.withEntry(key: String, value: String?): Map<String, String> {
+        val cleaned = value?.takeIf { it.isNotBlank() }
+        return if (cleaned == null) this - key else this + (key to cleaned)
+    }
+
     @VisibleForTesting
     internal suspend fun initializeDataStore(initialUiState: PersistedUIState) {
         dataStore.editOrCatch(onError = {}) { preferences ->
@@ -155,6 +185,8 @@ internal constructor(
             preferences[skipUngroupConfirmationKey] = initialUiState.skipUngroupConfirmation
             preferences[lockedTabIdsKey] = initialUiState.lockedTabIds
             preferences[lockedGroupIdsKey] = initialUiState.lockedGroupIds
+            preferences[customTabTitlesKey] = initialUiState.customTabTitles.toJsonString()
+            preferences[lockedTabRootUrlsKey] = initialUiState.lockedTabRootUrls.toJsonString()
         }
     }
 

@@ -57,6 +57,7 @@ import mozilla.components.ui.tabcounter.TabCounter
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.Banner
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
+import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.data.createTab
 import org.mozilla.fenix.tabstray.data.createTabGroup
 import org.mozilla.fenix.tabstray.redux.action.TabGroupAction
@@ -89,6 +90,10 @@ private val RowHeight = 48.dp
  *   banner.
  * @param onTabAutoCloseBannerDismiss Invoked when the user dismisses the auto-close banner.
  * @param onTabAutoCloseBannerShown Invoked when the auto-close banner is shown to the user.
+ * @param onReturnSelectedTabsToRootClick Invoked when the user clicks the "Return to root page" menu item for the
+ *   selected locked tabs.
+ * @param onAddSelectedTabToHomeScreenClick Invoked with the selected tab when the user clicks the "Add to Home screen"
+ *   menu item, which is offered when the selection is a single locked tab.
  */
 @Suppress("LongParameterList", "LongMethod")
 @Composable
@@ -106,6 +111,8 @@ fun TabsTrayBanner(
     onTabsTrayPbmLockedDismiss: () -> Unit,
     onTabAutoCloseBannerDismiss: () -> Unit,
     onTabAutoCloseBannerShown: () -> Unit,
+    onReturnSelectedTabsToRootClick: () -> Unit = {},
+    onAddSelectedTabToHomeScreenClick: (TabsTrayItem.Tab) -> Unit = {},
 ) {
     val isInMultiSelectMode by
         remember(state.mode) {
@@ -137,9 +144,14 @@ fun TabsTrayBanner(
 
     var hasAcknowledgedAutoCloseBanner by remember { mutableStateOf(false) }
     var hasAcknowledgedPbmLockBanner by remember { mutableStateOf(false) }
+    var tabToRename by remember { mutableStateOf<TabsTrayItem.Tab?>(null) }
 
     Column(modifier = Modifier.testTag(tag = TabsTrayTestTag.BANNER_ROOT)) {
         if (isInMultiSelectMode) {
+            // Renaming and adding a shortcut act on one tab, so they are only offered when the selection is exactly
+            // one tab and not a tab group.
+            val singleSelectedTab =
+                if (state.mode.selectedTabGroups.isEmpty()) state.mode.selectedTabs.singleOrNull() else null
             MultiSelectBanner(
                 selectedTabCount = state.mode.selectedTabs.size,
                 shouldShowInactiveButton = state.config.isInDebugMode,
@@ -163,6 +175,13 @@ fun TabsTrayBanner(
                         )
                     )
                 },
+                showRenameItem = singleSelectedTab != null,
+                onRenameSelectedTab = { tabToRename = singleSelectedTab },
+                showAddToHomeScreenItem =
+                    singleSelectedTab != null && singleSelectedTab.locked && !singleSelectedTab.private,
+                onAddSelectedTabToHomeScreen = { singleSelectedTab?.let(onAddSelectedTabToHomeScreenClick) },
+                showReturnToRootItem = state.mode.selectedTabs.any { it.locked && it.rootUrl != null },
+                onReturnSelectedTabsToRoot = onReturnSelectedTabsToRootClick,
             )
         } else {
             TabPageBanner(
@@ -218,6 +237,17 @@ fun TabsTrayBanner(
                 )
             }
         }
+    }
+
+    tabToRename?.let { tab ->
+        RenameTabDialog(
+            initialTitle = tab.title,
+            onConfirm = { newTitle ->
+                onAction(TabsTrayAction.RenameTab(tab = tab, newTitle = newTitle))
+                tabToRename = null
+            },
+            onDismiss = { tabToRename = null },
+        )
     }
 }
 
@@ -411,6 +441,16 @@ private fun BannerTab(
  * @param allSelectedTabsLocked Whether every currently selected tab is locked. Determines whether the multiselect
  *   menu offers to lock or unlock the selection.
  * @param onToggleSelectedTabsLocked Invoked when the user clicks the menu item to lock or unlock the selected tabs.
+ * @param showRenameItem Whether the menu offers to rename the selected tab (exactly one tab is selected).
+ * @param onRenameSelectedTab Invoked when the user clicks the menu item to rename the selected tab.
+ * @param showAddToHomeScreenItem Whether the menu offers to add the selected tab to the Home screen (exactly one
+ *   locked, non-private tab is selected).
+ * @param onAddSelectedTabToHomeScreen Invoked when the user clicks the menu item to add the selected tab to the Home
+ *   screen.
+ * @param showReturnToRootItem Whether the menu offers to return the selected tabs to their root pages (at least one
+ *   selected tab is locked and has a root page).
+ * @param onReturnSelectedTabsToRoot Invoked when the user clicks the menu item to return the selected tabs to their
+ *   root pages.
  */
 @Suppress("LongMethod", "LongParameterList")
 @Composable
@@ -428,6 +468,12 @@ private fun MultiSelectBanner(
     onAddToTabGroup: () -> Unit,
     allSelectedTabsLocked: Boolean,
     onToggleSelectedTabsLocked: () -> Unit,
+    showRenameItem: Boolean,
+    onRenameSelectedTab: () -> Unit,
+    showAddToHomeScreenItem: Boolean,
+    onAddSelectedTabToHomeScreen: () -> Unit,
+    showReturnToRootItem: Boolean,
+    onReturnSelectedTabsToRoot: () -> Unit,
 ) {
     val buttonsEnabled by
         remember(selectedTabCount) {
@@ -453,6 +499,12 @@ private fun MultiSelectBanner(
             onMakeSelectedTabsInactive = onMakeSelectedTabsInactive,
             onAddToTabGroup = onAddToTabGroup,
             onToggleSelectedTabsLocked = onToggleSelectedTabsLocked,
+            showRenameItem = showRenameItem,
+            onRenameSelectedTab = onRenameSelectedTab,
+            showAddToHomeScreenItem = showAddToHomeScreenItem,
+            onAddSelectedTabToHomeScreen = onAddSelectedTabToHomeScreen,
+            showReturnToRootItem = showReturnToRootItem,
+            onReturnSelectedTabsToRoot = onReturnSelectedTabsToRoot,
         )
 
     TopAppBar(
@@ -541,6 +593,12 @@ private fun generateMultiSelectBannerMenuItems(
     onMakeSelectedTabsInactive: () -> Unit,
     onAddToTabGroup: () -> Unit,
     onToggleSelectedTabsLocked: () -> Unit,
+    showRenameItem: Boolean,
+    onRenameSelectedTab: () -> Unit,
+    showAddToHomeScreenItem: Boolean,
+    onAddSelectedTabToHomeScreen: () -> Unit,
+    showReturnToRootItem: Boolean,
+    onReturnSelectedTabsToRoot: () -> Unit,
 ): List<MenuItem> {
     val menuItems =
         mutableListOf(
@@ -599,6 +657,36 @@ private fun generateMultiSelectBannerMenuItems(
             onClick = onToggleSelectedTabsLocked,
         )
     )
+    if (showRenameItem) {
+        menuItems.add(
+            MenuItem.IconItem(
+                text = Text.Resource(R.string.tab_manager_multiselect_menu_item_rename),
+                drawableRes = iconsR.drawable.mozac_ic_edit_24,
+                testTag = TabsTrayTestTag.RENAME_SELECTED_TAB_BUTTON,
+                onClick = onRenameSelectedTab,
+            )
+        )
+    }
+    if (showAddToHomeScreenItem) {
+        menuItems.add(
+            MenuItem.IconItem(
+                text = Text.Resource(R.string.tab_manager_multiselect_menu_item_add_to_home_screen),
+                drawableRes = iconsR.drawable.mozac_ic_add_to_homescreen_24,
+                testTag = TabsTrayTestTag.ADD_SELECTED_TAB_TO_HOME_SCREEN_BUTTON,
+                onClick = onAddSelectedTabToHomeScreen,
+            )
+        )
+    }
+    if (showReturnToRootItem) {
+        menuItems.add(
+            MenuItem.IconItem(
+                text = Text.Resource(R.string.tab_manager_multiselect_menu_item_return_to_root),
+                drawableRes = iconsR.drawable.mozac_ic_home_24,
+                testTag = TabsTrayTestTag.RETURN_SELECTED_TABS_TO_ROOT_BUTTON,
+                onClick = onReturnSelectedTabsToRoot,
+            )
+        )
+    }
     return menuItems
 }
 

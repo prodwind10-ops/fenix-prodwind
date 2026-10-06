@@ -52,6 +52,7 @@ import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.tabstray.data.createTab
+import org.mozilla.fenix.tabstray.data.toTabList
 import org.mozilla.fenix.tabstray.redux.action.TabGroupAction
 import org.mozilla.fenix.tabstray.redux.action.TabsTrayAction
 import org.mozilla.fenix.tabstray.redux.state.Page
@@ -74,6 +75,8 @@ import org.mozilla.fenix.theme.FirefoxTheme
  * @param onAccountSettingsClick Invoked when the user clicks on the account settings banner menu item.
  * @param onDeleteAllTabsClick Invoked when the user clicks on the close all tabs banner menu item.
  * @param onRefreshAllTabsClick Invoked when the user clicks on the refresh all tabs banner menu item.
+ * @param onReturnLockedTabsToRootClick Invoked when the user clicks on the return locked tabs to their root pages
+ *   banner menu item. The item is only offered when the selected page has a locked tab with a root page.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -89,6 +92,7 @@ internal fun TabManagerFloatingToolbar(
     onAccountSettingsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
     onRefreshAllTabsClick: () -> Unit = {},
+    onReturnLockedTabsToRootClick: () -> Unit = {},
 ) {
     AnimatedVisibility(
         visible = state.isFloatingToolbarVisible,
@@ -124,6 +128,7 @@ internal fun TabManagerFloatingToolbar(
                         onAccountSettingsClick = onAccountSettingsClick,
                         onDeleteAllTabsClick = onDeleteAllTabsClick,
                         onRefreshAllTabsClick = onRefreshAllTabsClick,
+                        onReturnLockedTabsToRootClick = onReturnLockedTabsToRootClick,
                         onSearchClicked = {
                             onAction(TabsTrayAction.TabSearchClicked)
                         },
@@ -164,10 +169,17 @@ private fun FloatingToolbarActions(
     onAccountSettingsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
     onRefreshAllTabsClick: () -> Unit,
+    onReturnLockedTabsToRootClick: () -> Unit,
     onSearchClicked: () -> Unit,
 ) {
     var showBottomAppBarMenu by remember { mutableStateOf(false) }
     var showCloseAllTabsDialog by remember { mutableStateOf(false) }
+
+    // Only offer to return locked tabs to their root pages when the page being viewed has at least one that can be.
+    val hasLockedTabsWithRoot =
+        (if (state.selectedPage == Page.PrivateTabs) state.privateBrowsing.tabs else state.normalTabsState.items)
+            .toTabList()
+            .any { it.locked && it.rootUrl != null }
 
     val menuItems =
         generateMenuItems(
@@ -183,6 +195,8 @@ private fun FloatingToolbarActions(
             onSelectAllTabsClick = onSelectAllTabsClick,
             onDeleteAllTabsClick = { showCloseAllTabsDialog = true },
             onRefreshAllTabsClick = onRefreshAllTabsClick,
+            hasLockedTabsWithRoot = hasLockedTabsWithRoot,
+            onReturnLockedTabsToRootClick = onReturnLockedTabsToRootClick,
         )
 
     Card(
@@ -377,6 +391,8 @@ private fun generateMenuItems(
     onSelectAllTabsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
     onRefreshAllTabsClick: () -> Unit,
+    hasLockedTabsWithRoot: Boolean,
+    onReturnLockedTabsToRootClick: () -> Unit,
     onAccountSettingsClick: () -> Unit,
 ): List<MenuItem> {
     val enterSelectModeItem =
@@ -429,6 +445,13 @@ private fun generateMenuItems(
             testTag = TabsTrayTestTag.REFRESH_ALL_TABS,
             onClick = onRefreshAllTabsClick,
         )
+    val returnLockedTabsToRootItem =
+        MenuItem.IconItem(
+            text = Text.Resource(R.string.tab_tray_menu_item_return_locked_to_root),
+            drawableRes = iconsR.drawable.mozac_ic_home_24,
+            testTag = TabsTrayTestTag.RETURN_LOCKED_TABS_TO_ROOT,
+            onClick = onReturnLockedTabsToRootClick,
+        )
     val accountSettingsItem =
         MenuItem.IconItem(
             text = Text.Resource(R.string.tab_tray_menu_account_settings),
@@ -458,14 +481,16 @@ private fun generateMenuItems(
                 newTabGroupItem.takeIf { homepageAsNewTabEnabled },
                 tabSettingsItem,
                 refreshAllTabsItem,
+                returnLockedTabsToRootItem.takeIf { hasLockedTabsWithRoot },
                 deleteAllTabsItem,
             )
 
         selectedPage == Page.PrivateTabs ->
-            listOf(
+            listOfNotNull(
                 recentlyClosedTabsItem,
                 tabSettingsItem,
                 refreshAllTabsItem,
+                returnLockedTabsToRootItem.takeIf { hasLockedTabsWithRoot },
                 deleteAllTabsItem,
             )
 

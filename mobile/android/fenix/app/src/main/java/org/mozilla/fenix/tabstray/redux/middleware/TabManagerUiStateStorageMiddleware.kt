@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
 import mozilla.components.support.base.log.logger.Logger
+import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.redux.action.TabGroupAction
 import org.mozilla.fenix.tabstray.redux.action.TabManagerUiStateStorageAction
 import org.mozilla.fenix.tabstray.redux.action.TabsTrayAction
@@ -101,31 +102,56 @@ class TabManagerUiStateStorageMiddleware(
 
             is TabGroupAction.UngroupConfirmed -> setSkipUngroupConfirmation(action.dontAskAgain)
 
-            is TabsTrayAction.ToggleTabLocked -> setTabLocked(tabId = action.tab.id, locked = action.locked)
+            is TabsTrayAction.ToggleTabLocked -> setTabsLocked(tabs = listOf(action.tab), locked = action.locked)
 
-            is TabsTrayAction.ToggleSelectedTabsLocked -> setTabsLocked(action.tabs.map { it.id }, action.locked)
+            is TabsTrayAction.ToggleSelectedTabsLocked -> setTabsLocked(tabs = action.tabs, locked = action.locked)
+
+            is TabsTrayAction.RenameTab -> setTabCustomTitle(tabId = action.tab.id, newTitle = action.newTitle)
 
             is TabGroupAction.ToggleGroupLocked -> setGroupLocked(groupId = action.group.id, locked = action.locked)
         }
     }
 
-    private fun setTabLocked(tabId: String, locked: Boolean) {
+    private fun setTabsLocked(tabs: Collection<TabsTrayItem.Tab>, locked: Boolean) {
         scope.launch {
-            val success = if (locked) uiStateRepository.lockTab(tabId) else uiStateRepository.unlockTab(tabId)
-            if (!success) {
-                logger.debug("Failed to update locked status for tab $tabId")
+            // Locked/unlocked one at a time via the same repository methods a single-tab toggle uses, rather than a
+            // dedicated bulk repository method, since DataStore writes are cheap and this keeps a single source of
+            // truth for what "locking a tab" means at the repository layer.
+            val results =
+                tabs.flatMap { tab ->
+                    if (locked) {
+                        listOfNotNull(
+                            // The page a tab is on when it is locked becomes its root. This is written before the lock
+                            // so the very first emission that shows the tab as locked already carries its root, and
+                            // only for tabs that are newly locked: locking a selection that includes an already-locked
+                            // tab must not replace that tab's root with wherever it has navigated to since.
+                            if (!tab.locked && !tab.isHomepageItem) {
+                                uiStateRepository.setTabRootUrl(tabId = tab.id, url = tab.url)
+                            } else {
+                                null
+                            },
+                            uiStateRepository.lockTab(tab.id),
+                        )
+                    } else {
+                        listOf(
+                            uiStateRepository.unlockTab(tab.id),
+                            uiStateRepository.setTabRootUrl(tabId = tab.id, url = null),
+                        )
+                    }
+                }
+            if (results.any { !it }) {
+                logger.debug("Failed to update locked status for one or more tabs")
             }
         }
     }
 
-    private fun setTabsLocked(tabIds: Collection<String>, locked: Boolean) {
+    private fun setTabCustomTitle(tabId: String, newTitle: String?) {
         scope.launch {
-            // Locked/unlocked one at a time via the same repository method a single-tab toggle uses, rather than a
-            // dedicated bulk repository method, since DataStore writes are cheap set operations and this keeps a
-            // single source of truth for what "locking a tab" means at the repository layer.
-            val results = tabIds.map { tabId -> if (locked) uiStateRepository.lockTab(tabId) else uiStateRepository.unlockTab(tabId) }
-            if (results.any { !it }) {
-                logger.debug("Failed to update locked status for one or more selected tabs")
+            // Saving with text always stores it as the tab's title, even if it matches the current page title, so a
+            // user can freeze a title that the page keeps changing. Blank text removes the custom title.
+            val success = uiStateRepository.setTabCustomTitle(tabId = tabId, title = newTitle?.trim())
+            if (!success) {
+                logger.debug("Failed to update the custom title for tab $tabId")
             }
         }
     }

@@ -45,4 +45,50 @@ class FakeTabManagerUiStateRepository(initialPersistedUIState: PersistedUIState?
         uiStateFlow.emit(currentSnapshot.copy(skipUngroupConfirmation = true))
         return true
     }
+
+    override suspend fun lockTab(tabId: String): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        uiStateFlow.emit(currentSnapshot.copy(lockedTabIds = currentSnapshot.lockedTabIds + tabId))
+        return true
+    }
+
+    override suspend fun unlockTab(tabId: String): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        uiStateFlow.emit(currentSnapshot.copy(lockedTabIds = currentSnapshot.lockedTabIds - tabId))
+        return true
+    }
+
+    override suspend fun lockGroup(groupId: String): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        uiStateFlow.emit(currentSnapshot.copy(lockedGroupIds = currentSnapshot.lockedGroupIds + groupId))
+        return true
+    }
+
+    override suspend fun unlockGroup(groupId: String): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        uiStateFlow.emit(currentSnapshot.copy(lockedGroupIds = currentSnapshot.lockedGroupIds - groupId))
+        return true
+    }
+
+    override suspend fun setTabCustomTitle(tabId: String, title: String?): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        val titles = if (title.isNullOrBlank()) {
+            currentSnapshot.customTabTitles - tabId
+        } else {
+            currentSnapshot.customTabTitles + (tabId to title)
+        }
+        uiStateFlow.emit(currentSnapshot.copy(customTabTitles = titles))
+        return true
+    }
+
+    override suspend fun setTabRootUrl(tabId: String, url: String?): Boolean {
+        val currentSnapshot = uiStateFlow.value ?: PersistedUIState()
+        val urls = if (url.isNullOrBlank()) {
+            currentSnapshot.lockedTabRootUrls - tabId
+        } else {
+            currentSnapshot.lockedTabRootUrls + (tabId to url)
+        }
+        uiStateFlow.emit(currentSnapshot.copy(lockedTabRootUrls = urls))
+        return true
+    }
 }

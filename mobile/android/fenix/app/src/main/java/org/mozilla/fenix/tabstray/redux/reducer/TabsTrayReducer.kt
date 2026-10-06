@@ -81,9 +81,11 @@ internal object TabsTrayReducer {
                 // the persisted UI state update arrives (see handleTabUpdates).
                 is TabsTrayAction.ToggleTabLocked -> state
 
-                // Locking or unlocking the selection is a one-shot bulk action, so leave select mode once it has
-                // been dispatched. The action carries the tabs itself, so the middleware does not need the selection.
-                is TabsTrayAction.ToggleSelectedTabsLocked ->
+                // Locking or unlocking the selection, or renaming the selected tab, is a one-shot action, so leave
+                // select mode once it has been dispatched. The actions carry the tabs themselves, so the middleware
+                // does not need the selection.
+                is TabsTrayAction.ToggleSelectedTabsLocked,
+                is TabsTrayAction.RenameTab ->
                     if (state.mode is TabsTrayState.Mode.Select) {
                         state.copy(mode = TabsTrayState.Mode.Normal)
                     } else {
@@ -244,23 +246,39 @@ internal object TabsTrayReducer {
         return when (action) {
             is TabsTrayAction.UpdateSelectedTabId -> state.copy(selectedTabId = action.tabId)
             is TabsTrayAction.TabDataUpdateReceived -> {
-                // Tab data is rebuilt from BrowserState on every update and has no concept of locking, so lock
-                // status from the most recently persisted UI state must be re-applied here.
+                // Tab data is rebuilt from BrowserState on every update and has no concept of locking or custom
+                // titles, so both from the most recently persisted UI state must be re-applied here. This is also
+                // what keeps a renamed tab's title when its page title changes.
                 val normalItems =
                     action.tabStorageUpdate.normalItems.withLockApplied(
                         lockedTabIds = state.lockedTabIds,
                         lockedGroupIds = state.lockedGroupIds,
+                        customTitles = state.customTabTitles,
+                        rootUrls = state.lockedTabRootUrls,
                     )
                 val inactiveTabs =
-                    action.tabStorageUpdate.inactiveTabs.map { it.withLockApplied(lockedTabIds = state.lockedTabIds) }
+                    action.tabStorageUpdate.inactiveTabs.map {
+                        it.withLockApplied(
+                            lockedTabIds = state.lockedTabIds,
+                            customTitles = state.customTabTitles,
+                            rootUrls = state.lockedTabRootUrls,
+                        )
+                    }
                 val privateTabs =
                     action.tabStorageUpdate.privateTabs.withLockApplied(
                         lockedTabIds = state.lockedTabIds,
                         lockedGroupIds = state.lockedGroupIds,
+                        customTitles = state.customTabTitles,
+                        rootUrls = state.lockedTabRootUrls,
                     )
                 val tabGroups =
                     action.tabStorageUpdate.tabGroups.map {
-                        it.withLockApplied(lockedTabIds = state.lockedTabIds, lockedGroupIds = state.lockedGroupIds)
+                        it.withLockApplied(
+                            lockedTabIds = state.lockedTabIds,
+                            lockedGroupIds = state.lockedGroupIds,
+                            customTitles = state.customTabTitles,
+                            rootUrls = state.lockedTabRootUrls,
+                        )
                     }
 
                 state.copy(
@@ -291,13 +309,19 @@ internal object TabsTrayReducer {
                                 state.normalTabsState.items.withLockApplied(
                                     lockedTabIds = action.update.lockedTabIds,
                                     lockedGroupIds = action.update.lockedGroupIds,
+                                    customTitles = action.update.customTabTitles,
+                                    rootUrls = action.update.lockedTabRootUrls,
                                 )
                         ),
                     inactiveTabs =
                         state.inactiveTabs.copy(
                             tabs =
                                 state.inactiveTabs.tabs.map {
-                                    it.withLockApplied(lockedTabIds = action.update.lockedTabIds)
+                                    it.withLockApplied(
+                                        lockedTabIds = action.update.lockedTabIds,
+                                        customTitles = action.update.customTabTitles,
+                                        rootUrls = action.update.lockedTabRootUrls,
+                                    )
                                 }
                         ),
                     privateBrowsing =
@@ -306,6 +330,8 @@ internal object TabsTrayReducer {
                                 state.privateBrowsing.tabs.withLockApplied(
                                     lockedTabIds = action.update.lockedTabIds,
                                     lockedGroupIds = action.update.lockedGroupIds,
+                                    customTitles = action.update.customTabTitles,
+                                    rootUrls = action.update.lockedTabRootUrls,
                                 )
                         ),
                     tabGroupState =
@@ -320,11 +346,15 @@ internal object TabsTrayReducer {
                                     it.withLockApplied(
                                         lockedTabIds = action.update.lockedTabIds,
                                         lockedGroupIds = action.update.lockedGroupIds,
+                                        customTitles = action.update.customTabTitles,
+                                        rootUrls = action.update.lockedTabRootUrls,
                                     )
                                 },
                         ),
                     lockedTabIds = action.update.lockedTabIds,
                     lockedGroupIds = action.update.lockedGroupIds,
+                    customTabTitles = action.update.customTabTitles,
+                    lockedTabRootUrls = action.update.lockedTabRootUrls,
                 )
 
             else -> state

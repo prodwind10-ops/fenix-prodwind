@@ -49,6 +49,10 @@ sealed interface TabsTrayItem {
      * @property isFocused Whether the tab is focused. This is only set when the tab data model is generated.
      * @property locked Whether the tab is locked. A locked tab is excluded from "close all tabs" and cannot be
      *   closed individually until unlocked.
+     * @property originalTitle The tab's page title, before any custom title the user gave the tab is applied. Equal
+     *   to [title] unless the tab has been renamed.
+     * @property rootUrl For a locked tab, the URL the tab was showing when it was locked, which the user can return
+     *   the tab to. Null for unlocked tabs and for tabs locked before root URLs were recorded.
      */
     @Immutable
     data class Tab(
@@ -62,6 +66,8 @@ sealed interface TabsTrayItem {
         val lastAccess: Long,
         override val isFocused: Boolean,
         val locked: Boolean = false,
+        val originalTitle: String = title,
+        val rootUrl: String? = null,
     ) : TabsTrayItem {
         override val isHomepageItem: Boolean = url.equals(ABOUT_HOME_URL, ignoreCase = true)
 
@@ -145,7 +151,9 @@ sealed interface TabsTrayItem {
     fun contains(text: String): Boolean {
         return when (this) {
             is Tab -> {
-                url.contains(text, ignoreCase = true) || title.contains(text, ignoreCase = true)
+                url.contains(text, ignoreCase = true) ||
+                    title.contains(text, ignoreCase = true) ||
+                    originalTitle.contains(text, ignoreCase = true)
             }
             is TabGroup -> false
         }
@@ -200,41 +208,71 @@ internal fun createTabGroup(
     )
 
 /**
- * Returns a copy of this [TabsTrayItem.Tab] with [locked] set based on whether its [TabsTrayItem.Tab.id] is present
- * in [lockedTabIds]. Used to re-apply lock status to tabs freshly rebuilt from [mozilla.components.browser.state.state.BrowserState],
- * which has no concept of tab locking.
+ * Returns a copy of this [TabsTrayItem.Tab] with the user's persisted customizations re-applied: [TabsTrayItem.Tab.locked]
+ * based on whether its [TabsTrayItem.Tab.id] is present in [lockedTabIds], [TabsTrayItem.Tab.title] set to the custom
+ * title in [customTitles] when there is one (otherwise the tab's page title), and [TabsTrayItem.Tab.rootUrl] set from
+ * [rootUrls] for locked tabs. Used on tabs freshly rebuilt from
+ * [mozilla.components.browser.state.state.BrowserState], which knows nothing about locking or custom titles.
+ *
+ * Every call site must pass the current [customTitles] and [rootUrls]: leaving them at their empty defaults removes
+ * custom titles and root URLs from the result.
  */
-internal fun TabsTrayItem.Tab.withLockApplied(lockedTabIds: Set<String>): TabsTrayItem.Tab =
-    copy(locked = id in lockedTabIds)
+internal fun TabsTrayItem.Tab.withLockApplied(
+    lockedTabIds: Set<String>,
+    customTitles: Map<String, String> = emptyMap(),
+    rootUrls: Map<String, String> = emptyMap(),
+): TabsTrayItem.Tab {
+    val isLocked = id in lockedTabIds
+    return copy(
+        locked = isLocked,
+        title = customTitles[id] ?: originalTitle,
+        rootUrl = if (isLocked) rootUrls[id] else null,
+    )
+}
 
 /**
  * Returns a copy of this [TabsTrayItem.TabGroup] with [locked] set based on whether its [TabsTrayItem.TabGroup.id] is
- * present in [lockedGroupIds], and with [locked] re-applied to each tab within the group based on [lockedTabIds].
- * Locking a group does not lock the individual tabs within it, so both sets are applied independently.
+ * present in [lockedGroupIds], and with the customizations re-applied to each tab within the group (see
+ * [TabsTrayItem.Tab.withLockApplied]). Locking a group does not lock the individual tabs within it, so both sets are
+ * applied independently.
  */
 internal fun TabsTrayItem.TabGroup.withLockApplied(
     lockedTabIds: Set<String>,
     lockedGroupIds: Set<String>,
+    customTitles: Map<String, String> = emptyMap(),
+    rootUrls: Map<String, String> = emptyMap(),
 ): TabsTrayItem.TabGroup =
     copy(
         locked = id in lockedGroupIds,
-        tabs = tabs.map { it.withLockApplied(lockedTabIds = lockedTabIds) },
+        tabs =
+            tabs.map {
+                it.withLockApplied(lockedTabIds = lockedTabIds, customTitles = customTitles, rootUrls = rootUrls)
+            },
     )
 
 /**
- * Returns a copy of this list of [TabsTrayItem]s with lock status re-applied to every [TabsTrayItem.Tab] and
- * [TabsTrayItem.TabGroup] based on [lockedTabIds] and [lockedGroupIds]. Intended to be called on tab data freshly
- * received from [mozilla.components.browser.state.state.BrowserState] before it enters [TabsTrayState][org.mozilla.fenix.tabstray.redux.state.TabsTrayState],
- * since that data has no concept of tab or group locking.
+ * Returns a copy of this list of [TabsTrayItem]s with lock status, custom titles and root URLs re-applied to every
+ * [TabsTrayItem.Tab] and [TabsTrayItem.TabGroup]. Intended to be called on tab data freshly received from
+ * [mozilla.components.browser.state.state.BrowserState] before it enters
+ * [TabsTrayState][org.mozilla.fenix.tabstray.redux.state.TabsTrayState], since that data has no concept of tab or group
+ * locking or of custom titles.
  */
 internal fun List<TabsTrayItem>.withLockApplied(
     lockedTabIds: Set<String>,
     lockedGroupIds: Set<String>,
+    customTitles: Map<String, String> = emptyMap(),
+    rootUrls: Map<String, String> = emptyMap(),
 ): List<TabsTrayItem> = map { item ->
     when (item) {
-        is TabsTrayItem.Tab -> item.withLockApplied(lockedTabIds = lockedTabIds)
+        is TabsTrayItem.Tab ->
+            item.withLockApplied(lockedTabIds = lockedTabIds, customTitles = customTitles, rootUrls = rootUrls)
         is TabsTrayItem.TabGroup ->
-            item.withLockApplied(lockedTabIds = lockedTabIds, lockedGroupIds = lockedGroupIds)
+            item.withLockApplied(
+                lockedTabIds = lockedTabIds,
+                lockedGroupIds = lockedGroupIds,
+                customTitles = customTitles,
+                rootUrls = rootUrls,
+            )
     }
 }
 
