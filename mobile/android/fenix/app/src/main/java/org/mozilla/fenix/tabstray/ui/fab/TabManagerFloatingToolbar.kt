@@ -129,17 +129,15 @@ internal fun TabManagerFloatingToolbar(
                         onDeleteAllTabsClick = onDeleteAllTabsClick,
                         onRefreshAllTabsClick = onRefreshAllTabsClick,
                         onReturnLockedTabsToRootClick = onReturnLockedTabsToRootClick,
-                        onSearchClicked = {
-                            onAction(TabsTrayAction.TabSearchClicked)
-                        },
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(FirefoxTheme.layout.space.static100))
 
+            // No weight here: the actions pill on the left takes all the width the FAB does not need. With equal
+            // weights the pill was limited to half the row and clipped its last button once it had three or more.
             Box(
-                modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 FloatingToolbarFAB(
@@ -170,7 +168,6 @@ private fun FloatingToolbarActions(
     onDeleteAllTabsClick: () -> Unit,
     onRefreshAllTabsClick: () -> Unit,
     onReturnLockedTabsToRootClick: () -> Unit,
-    onSearchClicked: () -> Unit,
 ) {
     var showBottomAppBarMenu by remember { mutableStateOf(false) }
     var showCloseAllTabsDialog by remember { mutableStateOf(false) }
@@ -215,18 +212,24 @@ private fun FloatingToolbarActions(
             modifier = Modifier.padding(all = FirefoxTheme.layout.space.static100),
             horizontalArrangement = Arrangement.spacedBy(FirefoxTheme.layout.space.static50),
         ) {
-            if (state.searchIconVisible) {
-                IconButton(
-                    onClick = onSearchClicked,
-                    contentDescription = stringResource(id = R.string.tab_manager_open_tab_search),
-                    modifier = Modifier.testTag(TabsTrayTestTag.TAB_SEARCH_ICON),
-                    enabled = state.searchIconEnabled,
-                ) {
-                    Icon(
-                        painter = painterResource(iconsR.drawable.mozac_ic_search_24),
-                        contentDescription = null,
-                    )
-                }
+            IconButton(
+                onClick = {
+                    onMenuShown()
+                    showBottomAppBarMenu = true
+                },
+                contentDescription = stringResource(id = R.string.open_tabs_menu),
+                modifier = Modifier.testTag(TabsTrayTestTag.THREE_DOT_BUTTON),
+            ) {
+                Icon(
+                    painter = painterResource(iconsR.drawable.mozac_ic_ellipsis_vertical_24),
+                    contentDescription = null,
+                )
+
+                DropdownMenu(
+                    menuItems = menuItems,
+                    expanded = showBottomAppBarMenu,
+                    onDismissRequest = { showBottomAppBarMenu = false },
+                )
             }
 
             if (showRefreshAllButton) {
@@ -253,26 +256,6 @@ private fun FloatingToolbarActions(
                         contentDescription = null,
                     )
                 }
-            }
-
-            IconButton(
-                onClick = {
-                    onMenuShown()
-                    showBottomAppBarMenu = true
-                },
-                contentDescription = stringResource(id = R.string.open_tabs_menu),
-                modifier = Modifier.testTag(TabsTrayTestTag.THREE_DOT_BUTTON),
-            ) {
-                Icon(
-                    painter = painterResource(iconsR.drawable.mozac_ic_ellipsis_vertical_24),
-                    contentDescription = null,
-                )
-
-                DropdownMenu(
-                    menuItems = menuItems,
-                    expanded = showBottomAppBarMenu,
-                    onDismissRequest = { showBottomAppBarMenu = false },
-                )
             }
         }
     }
