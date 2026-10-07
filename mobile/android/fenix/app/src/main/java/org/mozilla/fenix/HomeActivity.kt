@@ -198,6 +198,8 @@ import org.mozilla.fenix.splashscreen.FetchExperimentsOperation
 import org.mozilla.fenix.splashscreen.SplashScreenManager
 import org.mozilla.fenix.splashscreen.SplashScreenOperation
 import org.mozilla.fenix.tabhistory.TabHistoryDialogFragment
+import org.mozilla.fenix.tabstray.controller.ReturnLockedTabsToRootOnLaunch
+import org.mozilla.fenix.tabstray.repository.uistate.DefaultTabManagerUiStateRepository
 import org.mozilla.fenix.theme.DefaultThemeManager
 import org.mozilla.fenix.theme.StatusBarColorManager
 import org.mozilla.fenix.theme.TabStripStatusBarView
@@ -611,6 +613,13 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
 
         // This will record an event in Nimbus' internal event store. Used for behavioral targeting
         recordEventInNimbus("app_opened")
+
+        // A fresh launch of the app returns every locked tab to its root page. This does not run when the activity is
+        // only recreated (rotation, theme change, restored after being destroyed in the background), and it is not
+        // part of opening a custom tab or web app.
+        if (this !is ExternalAppBrowserActivity && isActivityColdStarted(intent, savedInstanceState)) {
+            returnLockedTabsToRootOnLaunch()
+        }
         if (components.settings.isTelemetryEnabled) {
             lifecycle.addObserver(
                 BreadcrumbsRecorder(
@@ -1739,6 +1748,20 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
                 Metrics.recentlyUsedPwaCount.add(recentlyUsedPwaCount)
             }
         }
+    }
+
+    private fun returnLockedTabsToRootOnLaunch() {
+        val returnToRoot =
+            ReturnLockedTabsToRootOnLaunch(
+                browserStore = components.core.store,
+                sessionUseCases = components.useCases.sessionUseCases,
+                uiStateRepository =
+                    DefaultTabManagerUiStateRepository(
+                        context = applicationContext,
+                        stateFlowScope = lifecycleScope,
+                    ),
+            )
+        lifecycleScope.launch { returnToRoot.run() }
     }
 
     @VisibleForTesting

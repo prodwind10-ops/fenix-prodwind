@@ -30,8 +30,8 @@ internal object TabsTrayTestTag {
 
     const val ACCOUNT_SETTINGS = "$THREE_DOT_BUTTON.accountSettings"
     const val CLOSE_ALL_TABS = "$THREE_DOT_BUTTON.closeAllTabs"
-    const val REFRESH_ALL_TABS = "$THREE_DOT_BUTTON.refreshAllTabs"
-    const val RETURN_LOCKED_TABS_TO_ROOT = "$THREE_DOT_BUTTON.returnLockedTabsToRoot"
+    const val REFRESH_ALL_TABS = "$TABS_TRAY.refreshAllTabs"
+    const val RETURN_LOCKED_TABS_TO_ROOT = "$TABS_TRAY.returnLockedTabsToRoot"
     const val NEW_TAB_GROUP = "$THREE_DOT_BUTTON.newTabGroup"
     const val RECENTLY_CLOSED_TABS = "$THREE_DOT_BUTTON.recentlyClosedTabs"
     const val SELECT_TABS = "$THREE_DOT_BUTTON.selectTabs"

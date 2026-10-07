@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.action.DebugAction
 import mozilla.components.browser.state.action.LastAccessAction
-import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
 import mozilla.components.browser.state.selector.selectedTab
@@ -887,19 +886,15 @@ class DefaultTabManagerController(
         tabsTrayStore.dispatch(TabsTrayAction.ExitSelectMode)
     }
 
-    /**
-     * Navigates each of the tabs with [tabIds] that is locked and has a root URL back to that URL. A tab that is already
-     * showing its root URL is skipped so it keeps its scroll position and page state. This is a normal navigation, so
-     * the page the tab was on stays in its history and the back button returns to it.
-     */
     private fun returnTabsToRoot(tabIds: Collection<String>) {
         val state = tabsTrayStore.state
-        tabIds.filter { it in state.lockedTabIds }.forEach { tabId ->
-            val rootUrl = state.lockedTabRootUrls[tabId] ?: return@forEach
-            if (browserStore.state.findTab(tabId)?.content?.url != rootUrl) {
-                sessionUseCases.loadUrl(url = rootUrl, sessionId = tabId)
-            }
-        }
+        returnLockedTabsToRoot(
+            browserStore = browserStore,
+            sessionUseCases = sessionUseCases,
+            tabIds = tabIds,
+            lockedTabIds = state.lockedTabIds,
+            rootUrls = state.lockedTabRootUrls,
+        )
     }
 
     override fun onOpenRecentlyClosedClicked() {

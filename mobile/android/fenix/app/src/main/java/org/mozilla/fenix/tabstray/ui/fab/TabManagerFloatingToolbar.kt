@@ -175,6 +175,11 @@ private fun FloatingToolbarActions(
     var showBottomAppBarMenu by remember { mutableStateOf(false) }
     var showCloseAllTabsDialog by remember { mutableStateOf(false) }
 
+    // Refreshing needs at least one tab on the page being viewed.
+    val showRefreshAllButton =
+        (state.selectedPage == Page.NormalTabs && state.normalTabsState.items.isNotEmpty()) ||
+            (state.selectedPage == Page.PrivateTabs && state.privateBrowsing.tabs.isNotEmpty())
+
     // Only offer to return locked tabs to their root pages when the page being viewed has at least one that can be.
     val hasLockedTabsWithRoot =
         (if (state.selectedPage == Page.PrivateTabs) state.privateBrowsing.tabs else state.normalTabsState.items)
@@ -194,9 +199,6 @@ private fun FloatingToolbarActions(
             onEnterMultiselectModeClick = onEnterMultiselectModeClick,
             onSelectAllTabsClick = onSelectAllTabsClick,
             onDeleteAllTabsClick = { showCloseAllTabsDialog = true },
-            onRefreshAllTabsClick = onRefreshAllTabsClick,
-            hasLockedTabsWithRoot = hasLockedTabsWithRoot,
-            onReturnLockedTabsToRootClick = onReturnLockedTabsToRootClick,
         )
 
     Card(
@@ -222,6 +224,32 @@ private fun FloatingToolbarActions(
                 ) {
                     Icon(
                         painter = painterResource(iconsR.drawable.mozac_ic_search_24),
+                        contentDescription = null,
+                    )
+                }
+            }
+
+            if (showRefreshAllButton) {
+                IconButton(
+                    onClick = onRefreshAllTabsClick,
+                    contentDescription = stringResource(id = R.string.tab_tray_menu_item_refresh),
+                    modifier = Modifier.testTag(TabsTrayTestTag.REFRESH_ALL_TABS),
+                ) {
+                    Icon(
+                        painter = painterResource(iconsR.drawable.mozac_ic_arrow_clockwise_24),
+                        contentDescription = null,
+                    )
+                }
+            }
+
+            if (hasLockedTabsWithRoot) {
+                IconButton(
+                    onClick = onReturnLockedTabsToRootClick,
+                    contentDescription = stringResource(id = R.string.tab_tray_menu_item_return_locked_to_root),
+                    modifier = Modifier.testTag(TabsTrayTestTag.RETURN_LOCKED_TABS_TO_ROOT),
+                ) {
+                    Icon(
+                        painter = painterResource(iconsR.drawable.mozac_ic_home_24),
                         contentDescription = null,
                     )
                 }
@@ -390,9 +418,6 @@ private fun generateMenuItems(
     onEnterMultiselectModeClick: () -> Unit,
     onSelectAllTabsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
-    onRefreshAllTabsClick: () -> Unit,
-    hasLockedTabsWithRoot: Boolean,
-    onReturnLockedTabsToRootClick: () -> Unit,
     onAccountSettingsClick: () -> Unit,
 ): List<MenuItem> {
     val enterSelectModeItem =
@@ -438,20 +463,6 @@ private fun generateMenuItems(
             onClick = onDeleteAllTabsClick,
             level = MenuItem.FixedItem.Level.Critical,
         )
-    val refreshAllTabsItem =
-        MenuItem.IconItem(
-            text = Text.Resource(R.string.tab_tray_menu_item_refresh),
-            drawableRes = iconsR.drawable.mozac_ic_arrow_clockwise_24,
-            testTag = TabsTrayTestTag.REFRESH_ALL_TABS,
-            onClick = onRefreshAllTabsClick,
-        )
-    val returnLockedTabsToRootItem =
-        MenuItem.IconItem(
-            text = Text.Resource(R.string.tab_tray_menu_item_return_locked_to_root),
-            drawableRes = iconsR.drawable.mozac_ic_home_24,
-            testTag = TabsTrayTestTag.RETURN_LOCKED_TABS_TO_ROOT,
-            onClick = onReturnLockedTabsToRootClick,
-        )
     val accountSettingsItem =
         MenuItem.IconItem(
             text = Text.Resource(R.string.tab_tray_menu_account_settings),
@@ -480,17 +491,13 @@ private fun generateMenuItems(
                 recentlyClosedTabsItem,
                 newTabGroupItem.takeIf { homepageAsNewTabEnabled },
                 tabSettingsItem,
-                refreshAllTabsItem,
-                returnLockedTabsToRootItem.takeIf { hasLockedTabsWithRoot },
                 deleteAllTabsItem,
             )
 
         selectedPage == Page.PrivateTabs ->
-            listOfNotNull(
+            listOf(
                 recentlyClosedTabsItem,
                 tabSettingsItem,
-                refreshAllTabsItem,
-                returnLockedTabsToRootItem.takeIf { hasLockedTabsWithRoot },
                 deleteAllTabsItem,
             )
 
