@@ -53,7 +53,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.Dispatchers
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.selector.findCustomTab
@@ -863,6 +863,10 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                 }
                 .value
 
+        // The web extension menu items kept in the MenuState call onDismiss, and that state can outlive this fragment
+        // (the StoreProvider persists it across configuration changes), so only hold on to the fragment weakly.
+        val weakFragment = WeakReference(this@MenuDialogFragment)
+
         webExtensionsMenuBinding.set(
             feature =
                 WebExtensionsMenuBinding(
@@ -870,7 +874,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                     customTabId = args.customTabSessionId,
                     menuStore = menuStore,
                     iconSize = 24.dpToPx(requireContext().resources.displayMetrics),
-                    onDismiss = { this@MenuDialogFragment.dismiss() },
+                    onDismiss = { weakFragment.get()?.dismiss() },
                 ),
             owner = this@MenuDialogFragment,
             view = view,
@@ -964,7 +968,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
             migratePrivateTabUseCase = components.useCases.tabsUseCases.migratePrivateTabUseCase,
             materialAlertDialogBuilder = MaterialAlertDialogBuilder(requireContext()),
             topSitesMaxLimit = components.settings.topSitesMaxLimit,
-            mainDispatcher = Dispatchers.Main,
+            scope = viewLifecycleOwner.lifecycleScope,
         )
     }
 

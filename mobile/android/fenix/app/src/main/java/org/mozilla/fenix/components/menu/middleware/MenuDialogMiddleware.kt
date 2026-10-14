@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.webextension.InstallationMethod
@@ -73,7 +74,11 @@ import org.mozilla.fenix.utils.Settings
  * @param materialAlertDialogBuilder The [MaterialAlertDialogBuilder] used to create a popup when trying to add a
  *   shortcut after the shortcut limit has been reached.
  * @param topSitesMaxLimit The maximum number of top sites the user can have.
- * @param mainDispatcher The [CoroutineDispatcher] for performing UI updates.
+ * @param mainDispatcher The [CoroutineDispatcher] the default [scope] performs UI updates on.
+ * @param scope The [CoroutineScope] the middleware runs its work in. It must be cancelled when the menu is destroyed:
+ *   loading the extensions waits for pending add-on actions and can stay suspended for a long time, and for as long as
+ *   it does it keeps the [MenuStore], and everything its state references (such as the menu dialog), in memory.
+ *   Defaults to a scope on [mainDispatcher] that is never cancelled.
  */
 @Suppress("LongParameterList", "CyclomaticComplexMethod")
 class MenuDialogMiddleware(
@@ -92,11 +97,11 @@ class MenuDialogMiddleware(
     private val migratePrivateTabUseCase: TabsUseCases.MigratePrivateTabUseCase,
     private val materialAlertDialogBuilder: MaterialAlertDialogBuilder,
     private val topSitesMaxLimit: Int,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val scope: CoroutineScope = CoroutineScope(mainDispatcher + SupervisorJob()),
 ) : Middleware<MenuState, MenuAction> {
 
     private val logger = Logger("MenuDialogMiddleware")
-    private val scope = CoroutineScope(mainDispatcher + SupervisorJob())
 
     override fun invoke(
         store: Store<MenuState, MenuAction>,
@@ -212,7 +217,11 @@ class MenuDialogMiddleware(
                 store.dispatch(MenuAction.UpdateExtensionState(recommendedAddons = recommendedAddons))
             }
         } catch (e: AddonManagerException) {
-            logger.error("Failed to query extensions", e)
+            // AddonManager wraps the CancellationException thrown when the menu is closed while the extensions are
+            // still loading. That is not a failure worth reporting.
+            if (isActive) {
+                logger.error("Failed to query extensions", e)
+            }
         }
     }
 
