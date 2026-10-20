@@ -212,6 +212,11 @@
             app:iconSpaceReserved="false"
             android:title="@string/firefox_labs_title" />
 
+        <androidx.preference.Preference
+            android:key="@string/pref_key_backup_restore"
+            app:iconSpaceReserved="false"
+            android:title="@string/backup_settings_title" />
+
         <androidx.preference.SwitchPreferenceCompat
             android:key="@string/pref_key_leakcanary"
             android:title="@string/preference_leakcanary"

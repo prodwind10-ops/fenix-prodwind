@@ -68,6 +68,7 @@ import org.mozilla.fenix.GleanMetrics.Translations
 import org.mozilla.fenix.GleanMetrics.Vpn
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.R
+import org.mozilla.fenix.backup.BackupActivity
 import org.mozilla.fenix.components.Components
 import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.databinding.AmoCollectionOverrideDialogBinding
@@ -561,6 +562,11 @@ class SettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragment 
                 resources.getString(R.string.pref_key_firefox_labs) -> {
                     SettingsMetrics.firefoxLabs.record()
                     SettingsFragmentDirections.actionSettingsFragmentToFirefoxLabsFragment()
+                }
+
+                resources.getString(R.string.pref_key_backup_restore) -> {
+                    startActivity(Intent(requireContext(), BackupActivity::class.java))
+                    null
                 }
 
                 resources.getString(R.string.pref_key_sync_debug) -> {

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "Backup cookies",
+  "description": "Lets the app save and restore the cookies of the browser for its backup feature. The app installs it only while a backup is made or restored, and removes it afterwards.",
+  "version": "1.0",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "backup-cookies@fenixfork.local"
+    }
+  },
+  "permissions": ["geckoViewAddons", "nativeMessaging", "cookies", "<all_urls>"],
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
