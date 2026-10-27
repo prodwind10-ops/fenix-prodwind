@@ -66,7 +66,8 @@ internal val TabListItemHeight: Dp
  * @param onCloseClick Invoked when the close button is clicked.
  * @param onClick Invoked when the item is clicked.
  * @param onLongClick Invoked when the item is long clicked.
- * @param onToggleLockClick Invoked when the user taps the lock icon on a locked tab to unlock it.
+ * @param onToggleLockClick Invoked when the user taps a lock icon on a locked tab to unlock it. This covers both the
+ *   lock next to the thumbnail and the lock shown in place of the close button.
  */
 @Composable
 fun TabListTabItem(
@@ -188,6 +189,7 @@ private fun TabContent(
         TabListIcon(
             selectionState = selectionState,
             onCloseClick = onCloseClick,
+            onToggleLockClick = onToggleLockClick,
             tab = tab,
         )
     }
@@ -197,18 +199,20 @@ private fun TabContent(
 private fun TabListIcon(
     selectionState: TabsTrayItemSelectionState,
     onCloseClick: (TabsTrayItem.Tab) -> Unit,
+    onToggleLockClick: (TabsTrayItem.Tab) -> Unit,
     tab: TabsTrayItem.Tab,
 ) {
     if (!selectionState.multiSelectEnabled) {
         ListItemDismissButton(
             contentDescription =
                 if (tab.locked) {
-                    stringResource(id = R.string.locked_tab_close_button_content_description, tab.title)
+                    stringResource(id = R.string.locked_tab_unlock_button_content_description, tab.title)
                 } else {
                     stringResource(id = R.string.close_tab_title, tab.title)
                 },
             modifier = Modifier.testTag(TabsTrayTestTag.TAB_ITEM_CLOSE),
             locked = tab.locked,
+            onLockedClick = { onToggleLockClick(tab) },
             onClick = { onCloseClick(tab) },
         )
     } else {

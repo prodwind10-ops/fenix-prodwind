@@ -58,6 +58,7 @@ private val EmptyPageWidth = 170.dp
  * @param trackersBlockedCount The number of trackers blocked to display in the footer card.
  * @param focusEnabled Whether the focus indicator is enabled.
  * @param onTabClose Invoked when the user clicks to close a tab.
+ * @param onTabToggleLock Invoked when the user taps the lock icon on a locked tab to unlock it.
  * @param onItemClick Invoked when the user clicks on a tab.
  * @param onItemLongClick Invoked when the user long clicks a tab.
  * @param shouldShowInactiveTabsAutoCloseDialog Whether the inactive tabs auto close dialog should be displayed.
@@ -98,6 +99,7 @@ internal fun NormalTabsPage(
     trackersBlockedCount: Int? = null,
     focusEnabled: Boolean,
     onTabClose: (TabsTrayItem.Tab) -> Unit,
+    onTabToggleLock: (TabsTrayItem.Tab) -> Unit = {},
     onItemClick: (TabsTrayItem) -> Unit,
     onItemLongClick: (TabsTrayItem) -> Unit,
     shouldShowInactiveTabsAutoCloseDialog: Boolean,
@@ -172,6 +174,7 @@ internal fun NormalTabsPage(
             trackersBlockedCount = trackersBlockedCount,
             modifier = Modifier.testTag(TabsTrayTestTag.NORMAL_TABS_LIST),
             onTabClose = onTabClose,
+            onTabToggleLock = onTabToggleLock,
             onItemClick = onItemClick,
             onItemLongClick = onItemLongClick,
             header = optionalInactiveTabsHeader,

@@ -40,6 +40,7 @@ private val EmptyPageWidth = 190.dp
  * @param state The current snapshot of [PrivateBrowsingState].
  * @param config The current snapshot of [TabsTrayConfig].
  * @param onTabClose Invoked when the user clicks to close a tab.
+ * @param onTabToggleLock Invoked when the user taps the lock icon on a locked tab to unlock it.
  * @param onItemClick Invoked when the user clicks on a tab.
  * @param onItemLongClick Invoked when the user long clicks on a tab.
  * @param tabInteractionHandler Handlers tab interactions such as moves and drag and drop.
@@ -51,6 +52,7 @@ internal fun PrivateTabsPage(
     state: PrivateBrowsingState,
     config: TabsTrayConfig,
     onTabClose: (TabsTrayItem.Tab) -> Unit,
+    onTabToggleLock: (TabsTrayItem.Tab) -> Unit = {},
     onItemClick: (TabsTrayItem) -> Unit,
     onItemLongClick: (TabsTrayItem) -> Unit,
     tabInteractionHandler: TabInteractionHandler,
@@ -74,6 +76,7 @@ internal fun PrivateTabsPage(
                 selectionMode = Mode.Normal, // Multiselection is not supported in private tabs
                 modifier = Modifier.testTag(TabsTrayTestTag.PRIVATE_TABS_LIST),
                 onTabClose = onTabClose,
+                onTabToggleLock = onTabToggleLock,
                 onItemClick = onItemClick,
                 onItemLongClick = onItemLongClick,
                 onEditTabGroupClick = {},

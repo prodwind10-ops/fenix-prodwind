@@ -257,6 +257,9 @@ fun TabsTray(
                             displayTabGroupOnboarding = state.shouldShowTabGroupOnboarding,
                             enteringGroupId = state.tabGroupState.enteringGroupId,
                             onTabClose = onTabClose,
+                            onTabToggleLock = { tab ->
+                                onAction(TabsTrayAction.ToggleTabLocked(tab = tab, locked = !tab.locked))
+                            },
                             shouldShowInactiveTabsAutoCloseDialog = state.inactiveTabs.showAutoCloseDialog,
                             onItemClick = onItemClick,
                             onItemLongClick = onItemLongClick,
@@ -302,6 +305,9 @@ fun TabsTray(
                             state = state.privateBrowsing,
                             config = state.config,
                             onTabClose = onTabClose,
+                            onTabToggleLock = { tab ->
+                                onAction(TabsTrayAction.ToggleTabLocked(tab = tab, locked = !tab.locked))
+                            },
                             onItemClick = onItemClick,
                             onItemLongClick = onItemLongClick,
                             tabInteractionHandler = tabInteractionHandler,

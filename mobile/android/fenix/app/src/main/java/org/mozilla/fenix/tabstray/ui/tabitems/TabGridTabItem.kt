@@ -83,7 +83,8 @@ private val TabHeaderFaviconSize = 12.dp
  * @param onLongClick Invoked when the item is long clicked.
  * @param itemInfo: Optional CollectionItemInfo? for a11y to read this item in a collection.
  * @param accessibilityActions Accessibility actions offered on the item, such as reordering it.
- * @param onToggleLockClick Invoked when the user taps the lock icon on a locked tab to unlock it.
+ * @param onToggleLockClick Invoked when the user taps a lock icon on a locked tab to unlock it. This covers both the
+ *   small lock next to the title and the lock shown in place of the close button.
  */
 @Composable
 fun TabGridTabItem(
@@ -152,7 +153,8 @@ fun TabGridTabItem(
  * @param interactionState The tab item's interaction state (hover, drag, etc)
  * @param itemInfo: Optional CollectionItemInfo? for a11y to read this item in a collection.
  * @param accessibilityActions Accessibility actions offered on the item, such as reordering it.
- * @param onToggleLockClick Invoked when the user taps the lock icon on a locked tab to unlock it.
+ * @param onToggleLockClick Invoked when the user taps a lock icon on a locked tab to unlock it. This covers both the
+ *   small lock next to the title and the lock shown in place of the close button.
  */
 @Composable
 private fun TabContent(
@@ -278,6 +280,7 @@ private fun Header(
             tab = tab,
             selectionState = selectionState,
             onCloseClick = onCloseClick,
+            onToggleLockClick = onToggleLockClick,
         )
     }
 }
@@ -312,11 +315,13 @@ private fun UtilityIcon(
     tab: TabsTrayItem.Tab,
     selectionState: TabsTrayItemSelectionState,
     onCloseClick: (TabsTrayItem.Tab) -> Unit,
+    onToggleLockClick: (TabsTrayItem.Tab) -> Unit,
 ) {
     if (!selectionState.multiSelectEnabled) {
         CloseButton(
             tab = tab,
             onCloseClick = onCloseClick,
+            onToggleLockClick = onToggleLockClick,
         )
     } else {
         Box(
@@ -328,20 +333,31 @@ private fun UtilityIcon(
     }
 }
 
+/**
+ * The button at the end of the tab header. It closes the tab, except while the tab is locked: a locked tab cannot be
+ * closed, so the button shows a lock instead of the close cross and tapping it unlocks the tab.
+ *
+ * @param tab The [TabsTrayItem.Tab] this button belongs to.
+ * @param onCloseClick Invoked when the button is tapped on an unlocked tab.
+ * @param onToggleLockClick Invoked when the button is tapped on a locked tab, to unlock it.
+ */
 @Composable
 private fun CloseButton(
     tab: TabsTrayItem.Tab,
     onCloseClick: (TabsTrayItem.Tab) -> Unit,
+    onToggleLockClick: (TabsTrayItem.Tab) -> Unit,
 ) {
     IconButton(
         onClick = {
-            if (!tab.locked) {
+            if (tab.locked) {
+                onToggleLockClick(tab)
+            } else {
                 onCloseClick(tab)
             }
         },
         contentDescription =
             if (tab.locked) {
-                stringResource(id = R.string.locked_tab_close_button_content_description, tab.title)
+                stringResource(id = R.string.locked_tab_unlock_button_content_description, tab.title)
             } else {
                 stringResource(id = R.string.close_tab_title, tab.title)
             },

@@ -319,10 +319,12 @@ fun TabGroupMenuButton(
 /**
  * The trailing dismiss/close button in the list presentation of tab tray items.
  *
- * @param contentDescription Accessibility label describing the dismiss action.
+ * @param contentDescription Accessibility label describing the dismiss action, or the unlock action while [locked].
  * @param modifier The [Modifier] applied to the button.
- * @param locked Whether the tab is locked. When true, the icon shows a lock instead of a close cross and the click
- *   is not forwarded to [onClick].
+ * @param locked Whether the tab is locked. When true, the icon shows a lock instead of a close cross, and clicking
+ *   it invokes [onLockedClick] instead of [onClick].
+ * @param onLockedClick Invoked when the button is clicked while [locked] is true, so that the lock can be tapped to
+ *   unlock the tab. A locked tab cannot be closed, so [onClick] is never invoked in this state.
  * @param onClick Invoked when the dismiss button is clicked. Not invoked while [locked] is true.
  */
 @Composable
@@ -330,11 +332,14 @@ fun ListItemDismissButton(
     contentDescription: String,
     modifier: Modifier = Modifier,
     locked: Boolean = false,
+    onLockedClick: () -> Unit = {},
     onClick: () -> Unit,
 ) {
     IconButton(
         onClick = {
-            if (!locked) {
+            if (locked) {
+                onLockedClick()
+            } else {
                 onClick()
             }
         },
